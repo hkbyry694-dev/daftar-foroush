@@ -272,6 +272,24 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 @media print{#printroot.invland .inv-img{page-break-after:always;width:100%!important;height:auto;margin:0}#printroot.invland .inv-img:last-child{page-break-after:auto}}
 .ivc .chip{padding:9px 14px;border-radius:12px;border:1.5px solid #d9e2f2;background:#fff;color:#1b2b8c;font:inherit;font-size:13px;font-weight:600}.ivc .chip.on{background:#1b2b8c;color:#fff;border-color:#1b2b8c}
 
+.atts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.att{width:72px;height:72px;border-radius:14px;overflow:hidden;background:var(--soft);border:1.5px solid var(--line);padding:0;display:grid;place-items:center}
+.att img{width:100%;height:100%;object-fit:cover;display:block}
+.att.add{border:2px dashed var(--accent);color:var(--accent);font-size:34px;font-weight:300;line-height:1;background:transparent}
+.attv{padding:14px;display:grid;place-items:center}.attv img{max-width:100%;max-height:70vh;border-radius:14px}
+.remb{display:flex;align-items:center;gap:10px;width:100%;margin:12px 0 0;padding:12px 14px;border-radius:var(--r);background:var(--amber-soft);color:var(--amber);text-align:right}
+.remb.over{background:var(--red-soft);color:var(--red)}.remb span{flex:1;display:flex;flex-direction:column}.remb small{opacity:.85;font-size:12px}
+.stin{width:84px;min-height:42px;padding:6px 10px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);text-align:center}
+.stdf{display:block;font-size:12px;min-height:16px}
+.lockov{position:fixed;inset:0;z-index:99999;background:var(--head);display:grid;place-items:center;color:#fff}
+.lkbox{width:min(320px,88vw);text-align:center}.lkbox h2{margin:8px 0 18px;font-size:20px}
+.lklogo{display:block;width:72px;height:72px;margin:0 auto}
+.lkd{display:flex;gap:14px;justify-content:center;margin:6px 0}.lkd i{width:14px;height:14px;border-radius:50%;border:2px solid #fff;display:block}.lkd i.on{background:#ffa000;border-color:#ffa000}
+.lkm{min-height:24px;margin:10px 0;font-size:13px;opacity:.9}.lkm.bad{color:#ffb3bd}
+.lkp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;direction:ltr}
+.lkk{height:62px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:24px}
+.bcv{width:100%;max-height:50vh;border-radius:14px;background:#000;object-fit:cover}
+
 </style>
 <div id="app"><main id="main"></main><nav class="bar" id="nav" aria-label="بخش‌های اصلی"></nav></div><div id="pages"></div><div id="sheets"></div>
 <script>
@@ -441,6 +459,7 @@ function migrate(S) {
   if (!S.settings.nextRet) S.settings.nextRet = 1;
   if (!Array.isArray(S.settings.pcats)) S.settings.pcats = DEF_PCATS.slice();
   if (!S.profile) S.profile = { name: S.settings.shop || '', logo: '', address: '', phone: '', card: '', sheba: '', owner: '' };
+  if (!Array.isArray(S.cheques)) S.cheques = [];
   return S;
 }
 function newState() {
@@ -457,7 +476,7 @@ function newState() {
     cats: [cat('اجاره', 'expense'), cat('حمل و نقل', 'expense'), cat('قبوض', 'expense'), cat('غذا و مصرفی', 'expense'), cat('حقوق و دستمزد', 'expense'), cat('سایر هزینه‌ها', 'expense'),
       cat('درآمد خدمات', 'income'), cat('درآمد جانبی', 'income'), cat('سایر درآمدها', 'income')],
     partners: [], visitors: [],
-    docs: [], txns: [], pent: [], partE: [], visE: [], seq: 0
+    docs: [], txns: [], pent: [], partE: [], visE: [], cheques: [], seq: 0
   };
 }
 
@@ -606,6 +625,13 @@ function deleteDocRaw(S, id) {
     if (bs.some(b => b.left < b.qty - 1e-9)) throw new Error('بخشی از کالای این خرید فروخته شده و حذف آن ممکن نیست.');
     S.batches = S.batches.filter(b => b.ref !== id);
   }
+  else if (doc.type === 'adj') {
+    const bs = S.batches.filter(b => b.ref === id);
+    if (bs.some(b => b.left < b.qty - 1e-9)) throw new Error('بخشی از کالای اضافه‌شده در انبارگردانی فروخته شده و حذف آن ممکن نیست.');
+    S.batches = S.batches.filter(b => b.ref !== id);
+    for (const it of doc.items) for (const c of (it.consumed || [])) { const b = S.batches.find(x => x.id === c.bid); if (b) b.left += c.qty; }
+  }
+  (S.cheques || []).forEach(c => { if (c.docId === id) { c.status = 'open'; c.docId = null; c.accountId = null; c.clearTs = null; } });
   removeRefs(S, id);
   S.docs = S.docs.filter(x => x.id !== id);
   return doc;
@@ -626,7 +652,7 @@ function addSale(S, d, editId) {
     for (const it of pv.items) for (const c of it.consumed) s.batches.find(b => b.id === c.bid).left -= c.qty;
     const doc = { id, seq, type: 'sale', no, ts, ledgerId: d.ledgerId, partyId: d.partyId, items: pv.items, gross: pv.gross, disc: pv.disc, discMode: d.discMode || 'amount', discVal: +d.discVal || 0, sub: pv.sub, tax: pv.tax, extra: pv.extra, total: pv.total,
       payType: d.payType, accountId: d.payType !== 'credit' ? d.accountId : null, visitorId: d.visitorId || null, shares: pv.shares, visitorComm: pv.visitorComm,
-      profit: pv.profit, ownerShare: pv.ownerShare, note: d.note || '' };
+      profit: pv.profit, ownerShare: pv.ownerShare, note: d.note || '', att: d.att || [], dueTs: d.payType === 'credit' ? (d.dueTs || null) : null };
     s.docs.push(doc);
     if (d.payType !== 'credit') s.txns.push({ id: uid(), ref: id, ts, accountId: d.accountId, amount: pv.total });
     else s.pent.push({ id: uid(), ref: id, ts, partyId: d.partyId, delta: pv.total });
@@ -741,7 +767,7 @@ function addBuy(S, d, editId) {
     const total = c.sub + c.tax + (c.freightInv ? c.freight : 0);
     for (const it of c.out) s.batches.push({ id: uid(), ref: id, pid: it.pid, ts: d.ts, seq: nextSeq(s), qty: it.qty, left: it.qty, price: it.unitCost, base: it.price, fpu: it.fpu, partners: it.partners });
     const doc = { id, seq, type: 'buy', no, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, items: c.out, gross: c.gross, disc: c.disc, discMode: d.discMode || 'amount', discVal: +d.discVal || 0, sub: c.sub, tax: c.tax, freight: c.freight, freightMode: c.freightInv ? 'inv' : 'acct', freightBy: c.by, freightAcct: c.freightInv ? null : d.freightAcct, total,
-      payType: d.payType, accountId: d.payType !== 'credit' ? d.accountId : null, note: d.note || '' };
+      payType: d.payType, accountId: d.payType !== 'credit' ? d.accountId : null, note: d.note || '', att: d.att || [], dueTs: d.payType === 'credit' ? (d.dueTs || null) : null };
     s.docs.push(doc);
     if (d.payType !== 'credit') s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: -total });
     else s.pent.push({ id: uid(), ref: id, ts: d.ts, partyId: d.partyId, delta: -total });
@@ -756,7 +782,7 @@ function addCashDoc(S, type, d) { // receipt | payment (با طرف‌حساب)
     const amount = positive(d.amount); needAccount(s, d);
     if (!s.parties.find(p => p.id === d.partyId)) throw new Error('طرف‌حساب را انتخاب کنید.');
     const id = uid(), seq = nextSeq(s), sign = type === 'receipt' ? 1 : -1;
-    s.docs.push({ id, seq, type, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, total: amount, accountId: d.accountId, note: d.note || '' });
+    s.docs.push({ id, seq, type, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: sign * amount });
     s.pent.push({ id: uid(), ref: id, ts: d.ts, partyId: d.partyId, delta: -sign * amount });
     return id;
@@ -767,7 +793,7 @@ function addMoney(S, d) { // income | expense
     const amount = positive(d.amount); needAccount(s, d);
     const cat = s.cats.find(c => c.id === d.catId); if (!cat) throw new Error('دسته‌بندی را انتخاب کنید.');
     const id = uid(), seq = nextSeq(s), sign = d.kind === 'income' ? 1 : -1;
-    s.docs.push({ id, seq, type: d.kind, ts: d.ts, ledgerId: d.ledgerId, catId: d.catId, total: amount, accountId: d.accountId, note: d.note || '' });
+    s.docs.push({ id, seq, type: d.kind, ts: d.ts, ledgerId: d.ledgerId, catId: d.catId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: sign * amount });
     return id;
   });
@@ -776,7 +802,7 @@ function addPartnerPay(S, d) {
   return tx(S, s => {
     const amount = positive(d.amount); needAccount(s, d);
     const id = uid(), seq = nextSeq(s);
-    s.docs.push({ id, seq, type: 'ppay', ts: d.ts, ledgerId: d.ledgerId, partnerId: d.partnerId, total: amount, accountId: d.accountId, note: d.note || '' });
+    s.docs.push({ id, seq, type: 'ppay', ts: d.ts, ledgerId: d.ledgerId, partnerId: d.partnerId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: -amount });
     s.partE.push({ id: uid(), ref: id, ts: d.ts, partnerId: d.partnerId, amount: -amount, kind: 'payment' });
     return id;
@@ -786,7 +812,7 @@ function addVisitorPay(S, d) {
   return tx(S, s => {
     const amount = positive(d.amount); needAccount(s, d);
     const id = uid(), seq = nextSeq(s);
-    s.docs.push({ id, seq, type: 'vpay', ts: d.ts, ledgerId: d.ledgerId, visitorId: d.visitorId, total: amount, accountId: d.accountId, note: d.note || '' });
+    s.docs.push({ id, seq, type: 'vpay', ts: d.ts, ledgerId: d.ledgerId, visitorId: d.visitorId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: -amount });
     s.visE.push({ id: uid(), ref: id, ts: d.ts, visitorId: d.visitorId, amount: -amount, kind: 'payment' });
     return id;
@@ -826,9 +852,10 @@ function summary(S, r) {
   const salary = sum(docs.filter(d => d.type === 'vsal'), d => d.total);
   const exp = sum(docs.filter(d => d.type === 'expense'), d => d.total);
   const inc = sum(docs.filter(d => d.type === 'income'), d => d.total);
+  const adjLoss = sum(docs.filter(d => d.type === 'adj'), d => d.loss || 0);
   const byProduct = {};
   for (const d of sales) for (const i of d.items) { const b = byProduct[i.pid] || (byProduct[i.pid] = { pid: i.pid, qty: 0, rev: 0, profit: 0 }); b.qty += i.qty; b.rev += i.total; b.profit += i.profit; }
-  return { count: sales0.length, rev, cost, profit, comm, owner, partners, salary, exp, inc, net: owner - salary + inc - exp, byProduct: Object.values(byProduct) };
+  return { count: sales0.length, rev, cost, profit, comm, owner, partners, salary, exp, inc, adjLoss, net: owner - salary + inc - exp - adjLoss, byProduct: Object.values(byProduct) };
 }
 
 /* ---------- آمار و تحلیل فروش ---------- */
@@ -880,8 +907,8 @@ const mny = n => (n < 0 ? '−' : '') + faS(grpS(n));
 const qtyS = n => faS(String(Math.round(n * 100) / 100));
 const p2s = n => String(n).padStart(2, '0');
 const dateS = ts => { const j = jOf(ts); return faS(j.y + '/' + p2s(j.m) + '/' + p2s(j.d)); };
-const TYPE_FA = { sale: 'فروش', buy: 'خرید', receipt: 'دریافت وجه', payment: 'پرداخت وجه', income: 'درآمد', expense: 'هزینه', ppay: 'پرداخت به شریک', vpay: 'پرداخت به ویزیتور', vsal: 'حقوق ویزیتور', sret: 'مرجوعی فروش' };
-const SIGN = { sale: 1, buy: -1, receipt: 1, payment: -1, income: 1, expense: -1, ppay: -1, vpay: -1, vsal: 0, sret: -1 };
+const TYPE_FA = { adj: 'اصلاح موجودی', sale: 'فروش', buy: 'خرید', receipt: 'دریافت وجه', payment: 'پرداخت وجه', income: 'درآمد', expense: 'هزینه', ppay: 'پرداخت به شریک', vpay: 'پرداخت به ویزیتور', vsal: 'حقوق ویزیتور', sret: 'مرجوعی فروش' };
+const SIGN = { adj: 0, sale: 1, buy: -1, receipt: 1, payment: -1, income: 1, expense: -1, ppay: -1, vpay: -1, vsal: 0, sret: -1 };
 const PAY_FA = { cash: 'نقدی', pos: 'کارتخوان', bank: 'به حساب بانکی', credit: 'نسیه' };
 const byTs = (a, b) => a.ts - b.ts || a.seq - b.seq;
 function rangeText(from, to) { return from == null && to == null ? 'همه‌ی تاریخ‌ها' : 'از ' + (from == null ? 'ابتدا' : dateS(from)) + ' تا ' + (to == null ? 'امروز' : dateS(to)); }
@@ -1027,9 +1054,121 @@ function repAccounts(S) {
     sheets: [{ name: 'حساب‌ها', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'حساب', t: 'text', w: 24 }, { h: 'نوع', t: 'text', w: 10 }, { h: 'موجودی اولیه', t: 'money', w: 18 }, { h: 'جمع ورودی', t: 'money', w: 18 }, { h: 'جمع خروجی', t: 'money', w: 18 }, { h: 'موجودی فعلی', t: 'money', w: 18 }], rows, tones: rows.map(r => r[6] < 0 ? 'neg' : '') }] };
 }
 
-const api = { chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
+const api = { addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
   addSale, addBuy, calcDisc, addSaleReturn, returnable, migrate, DEF_PCATS, invoiceData, partyBalBefore, repTxns, repParty, repInventory, repParties, repAccounts, lastCostAt, TYPE_FA, SIGN, PAY_FA, dateS, faS, mny, qtyS, rangeText, deleteDoc, addCashDoc, addMoney, addPartnerPay, addVisitorPay, addVisitorSalary, partyBal, accountBal, partnerBal, visitorBal, summary, partnerApplies };
 
+
+/* ---------- چک‌ها ---------- */
+function addCheque(S, d, editId) {
+  return tx(S, s => {
+    s.cheques = s.cheques || [];
+    const amount = positive(d.amount);
+    if (!s.parties.find(p => p.id === d.partyId)) throw new Error('طرف‌حساب را انتخاب کنید.');
+    if (!d.due) throw new Error('تاریخ سررسید را وارد کنید.');
+    const v = { ledgerId: d.ledgerId, partyId: d.partyId, dir: d.dir === 'out' ? 'out' : 'in', no: d.no || '', bank: d.bank || '', amount, due: d.due, note: d.note || '', att: d.att || [] };
+    if (editId) { const c = s.cheques.find(x => x.id === editId); if (!c) throw new Error('چک پیدا نشد.'); if (c.status === 'cleared') throw new Error('چک وصول‌شده قابل ویرایش نیست؛ ابتدا وصول را برگردانید.'); Object.assign(c, v); return c; }
+    const c = { id: uid(), seq: nextSeq(s), ts: d.ts || Date.now(), status: 'open', accountId: null, docId: null, clearTs: null, ...v };
+    s.cheques.push(c); return c;
+  });
+}
+function clearCheque(S, id, d) {
+  return tx(S, s => {
+    const c = (s.cheques || []).find(x => x.id === id); if (!c) throw new Error('چک پیدا نشد.');
+    if (c.status === 'cleared') throw new Error('این چک قبلاً وصول شده است.');
+    const ts = d.ts || Date.now();
+    const r = addCashDoc(s, c.dir === 'in' ? 'receipt' : 'payment', { ledgerId: c.ledgerId, partyId: c.partyId, amount: c.amount, accountId: d.accountId, ts, note: 'چک' + (c.no ? ' ' + faS(c.no) : '') + (c.bank ? ' ' + c.bank : ''), att: (c.att || []).slice() });
+    if (r.error) throw new Error(r.error);
+    c.status = 'cleared'; c.docId = r.value; c.accountId = d.accountId; c.clearTs = ts; return c;
+  });
+}
+function bounceCheque(S, id) { return tx(S, s => { const c = (s.cheques || []).find(x => x.id === id); if (!c) throw new Error('چک پیدا نشد.'); if (c.status === 'cleared') throw new Error('چک وصول‌شده را نمی‌شود برگشتی کرد؛ ابتدا وصول را برگردانید.'); c.status = 'bounced'; return c; }); }
+function reopenCheque(S, id) { return tx(S, s => { const c = (s.cheques || []).find(x => x.id === id); if (!c) throw new Error('چک پیدا نشد.'); if (c.status === 'cleared' && c.docId) deleteDocRaw(s, c.docId); c.status = 'open'; c.docId = null; c.accountId = null; c.clearTs = null; return c; }); }
+function deleteCheque(S, id) { return tx(S, s => { const c = (s.cheques || []).find(x => x.id === id); if (!c) throw new Error('چک پیدا نشد.'); if (c.status === 'cleared') throw new Error('ابتدا وصول چک را برگردانید.'); s.cheques = s.cheques.filter(x => x.id !== id); }); }
+
+/* ---------- انبارگردانی ---------- */
+function addStocktake(S, d) {
+  return tx(S, s => {
+    const id = uid(), seq = nextSeq(s), items = []; let loss = 0;
+    for (const x of d.items) {
+      if (!s.products.find(p => p.id === x.pid)) continue;
+      const sys = +stockOf(s, x.pid).toFixed(6), cnt = +x.counted; if (!(cnt >= 0)) throw new Error('عدد شمارش نامعتبر است.');
+      const diff = +(cnt - sys).toFixed(6); if (Math.abs(diff) < 1e-9) continue;
+      if (diff > 0) {
+        const price = lastBuyPrice(s, x.pid), val = R(diff * price);
+        s.batches.push({ id: uid(), ref: id, pid: x.pid, ts: d.ts, seq: nextSeq(s), qty: diff, left: diff, price, base: price, fpu: 0, partners: [] });
+        items.push({ pid: x.pid, sys, counted: cnt, diff, qty: diff, price, total: val, value: val, consumed: [] }); loss -= val;
+      } else {
+        const q = -diff, pl = planCost(s.batches, x.pid, q, 'fifo'); if (pl.error) throw new Error('موجودی برای اصلاح کافی نیست.');
+        for (const c of pl.consumed) s.batches.find(b => b.id === c.bid).left -= c.qty;
+        items.push({ pid: x.pid, sys, counted: cnt, diff, qty: q, price: q ? R(pl.cost / q) : 0, total: pl.cost, value: -pl.cost, consumed: pl.consumed }); loss += pl.cost;
+      }
+    }
+    if (!items.length) throw new Error('اختلافی بین شمارش و موجودی نیست.');
+    const doc = { id, seq, type: 'adj', ts: d.ts, ledgerId: d.ledgerId, items, total: Math.abs(loss), loss, note: d.note || '', att: d.att || [] };
+    s.docs.push(doc); return doc;
+  });
+}
+
+/* ---------- مطالبات و بدهی‌های باز، یادآوری، سالمندی ---------- */
+function openItems(S, partyId) {
+  const b = partyBal(S, partyId); if (Math.abs(b) < 1) return { dir: 0, bal: 0, items: [] };
+  const sg = b > 0 ? 1 : -1; let rem = Math.abs(b);
+  const es = S.pent.filter(e => e.partyId === partyId && e.delta * sg > 0).sort((a, c) => c.ts - a.ts); const items = [];
+  for (const e of es) { if (rem < 0.5) break; const amt = Math.min(rem, Math.abs(e.delta)); rem -= amt; items.push({ ts: e.ts, amount: amt, ref: e.ref, doc: S.docs.find(x => x.id === e.ref) || null }); }
+  if (rem >= 0.5) items.push({ ts: es.length ? es[es.length - 1].ts : Date.now(), amount: rem, ref: null, doc: null });
+  return { dir: sg, bal: b, items };
+}
+function reminders(S, now, lid) {
+  now = now || Date.now(); const today = dayStart(now), dd = ts => Math.round((dayStart(ts) - today) / 864e5);
+  const cheques = (S.cheques || []).filter(c => c.status === 'open' && (!lid || c.ledgerId === lid)).map(c => ({ c, days: dd(c.due) })).filter(x => x.days <= 7).sort((a, b) => a.days - b.days);
+  const debts = [];
+  for (const p of S.parties) { if (lid && p.ledgerId !== lid) continue; const oi = openItems(S, p.id); for (const it of oi.items) if (it.doc && it.doc.dueTs) { const days = dd(it.doc.dueTs); if (days <= 7) debts.push({ party: p, doc: it.doc, amount: it.amount, dir: oi.dir, days }); } }
+  debts.sort((a, b) => a.days - b.days);
+  const low = S.products.filter(p => p.min && stockOf(S, p.id) <= p.min);
+  return { cheques, debts, low, count: cheques.length + debts.length + low.length };
+}
+const AGE_B = [[0, 30, '۰ تا ۳۰ روز'], [31, 60, '۳۱ تا ۶۰ روز'], [61, 90, '۶۱ تا ۹۰ روز'], [91, 1e9, 'بیش از ۹۰ روز']];
+function repAging(S, o) {
+  o = o || {}; const cur = S.settings.currency, now = o.now || Date.now(), ps = S.parties.filter(p => !o.ledgerId || p.ledgerId === o.ledgerId);
+  const build = dir => {
+    const rows = [], tones = []; const tot = [0, 0, 0, 0];
+    ps.forEach(p => { const oi = openItems(S, p.id); if (oi.dir !== dir) return; const b = [0, 0, 0, 0]; oi.items.forEach(it => { const age = Math.max(0, Math.floor((dayStart(now) - dayStart(it.ts)) / 864e5)); const k = AGE_B.findIndex(x => age >= x[0] && age <= x[1]); b[k] += it.amount; });
+      b.forEach((v, i) => { tot[i] += v; }); rows.push({ p, b, t: b.reduce((a, c) => a + c, 0) }); });
+    rows.sort((a, c) => (c.b[3] - a.b[3]) || (c.t - a.t));
+    return { rows: rows.map((r, i) => [i + 1, r.p.name, r.p.mobile || '', ...r.b.map(v => v || ''), r.t]), tones: rows.map(r => r.b[3] > 0 ? 'neg' : ''), tot };
+  };
+  const cols = [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'نام', t: 'text', w: 24 }, { h: 'موبایل', t: 'text', w: 15 }, ...AGE_B.map(x => ({ h: x[2], t: 'money', w: 16 })), { h: 'جمع (' + cur + ')', t: 'money', w: 18 }];
+  const A_ = build(1), B_ = build(-1);
+  const foot = t => ['', 'جمع', '', ...t, t.reduce((a, c) => a + c, 0)];
+  return { title: 'مطالبات و بدهی‌های معوق', subtitle: 'تا ' + dateS(now) + ' — سن هر مبلغ از تاریخ فاکتور حساب می‌شود', cur,
+    summary: [{ l: 'جمع طلب من', v: A_.tot.reduce((a, c) => a + c, 0), kind: 'money', tone: 'pos' }, { l: 'طلب بیش از ۹۰ روز', v: A_.tot[3], kind: 'money', tone: A_.tot[3] ? 'neg' : '' }, { l: 'جمع بدهی من', v: B_.tot.reduce((a, c) => a + c, 0), kind: 'money', tone: 'neg' }],
+    sheets: [{ name: 'طلب از مشتریان', cols, rows: A_.rows, tones: A_.tones, foot: foot(A_.tot) }, { name: 'بدهی به تأمین‌کنندگان', cols, rows: B_.rows, tones: B_.tones, foot: foot(B_.tot) }] };
+}
+function repCustProfit(S, o) {
+  o = o || {}; const cur = S.settings.currency, a = analytics(S, { from: o.from, to: o.to, ledgerId: o.ledgerId });
+  const list = a.byParty.map(x => ({ ...x, p: S.parties.find(p => p.id === x.partyId) || { name: '' } })).sort((x, y) => y.profit - x.profit);
+  const rows = list.map((x, i) => [i + 1, x.p.name, x.count, x.rev, x.profit, x.rev ? Math.round(x.profit / x.rev * 1000) / 10 : 0, partyBal(S, x.partyId)]);
+  const cols = [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'مشتری', t: 'text', w: 26 }, { h: 'تعداد فاکتور', t: 'num', w: 12 }, { h: 'جمع فروش (' + cur + ')', t: 'money', w: 18 }, { h: 'سود (' + cur + ')', t: 'money', w: 18 }, { h: 'حاشیه سود ٪', t: 'num', w: 12 }, { h: 'مانده فعلی', t: 'money', w: 16 }];
+  return { title: 'سود به تفکیک مشتری', subtitle: rangeText(o.from, o.to), cur, summary: [{ l: 'جمع فروش', v: a.rev, kind: 'money' }, { l: 'جمع سود', v: a.profit, kind: 'money', tone: a.profit < 0 ? 'neg' : 'pos', strong: 1 }],
+    sheets: [{ name: 'مشتریان', cols, rows, tones: list.map(x => x.profit < 0 ? 'neg' : 'pos'), foot: ['', 'جمع', sum(list, x => x.count), a.rev, a.profit, a.rev ? Math.round(a.profit / a.rev * 1000) / 10 : 0, ''] }] };
+}
+function repCheques(S, o) {
+  o = o || {}; const cur = S.settings.currency, ST = { open: 'در جریان', cleared: 'وصول‌شده', bounced: 'برگشتی' };
+  const list = (S.cheques || []).filter(c => (!o.ledgerId || c.ledgerId === o.ledgerId) && (!o.dir || c.dir === o.dir)).slice().sort((a, b) => a.due - b.due);
+  const rows = list.map((c, i) => [i + 1, c.dir === 'in' ? 'دریافتی' : 'پرداختی', (S.parties.find(p => p.id === c.partyId) || {}).name || '', c.no ? faS(c.no) : '', c.bank || '', dateS(c.due), ST[c.status], c.amount]);
+  const tones = list.map(c => c.status === 'bounced' ? 'neg' : c.status === 'cleared' ? 'pos' : '');
+  const op = d => sum(list.filter(c => c.status === 'open' && c.dir === d), c => c.amount);
+  return { title: 'گزارش چک‌ها', subtitle: 'تا ' + dateS(Date.now()), cur, summary: [{ l: 'چک دریافتی در جریان', v: op('in'), kind: 'money', tone: 'pos' }, { l: 'چک پرداختی در جریان', v: op('out'), kind: 'money', tone: 'neg' }],
+    sheets: [{ name: 'چک‌ها', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'نوع', t: 'text', w: 10 }, { h: 'طرف‌حساب', t: 'text', w: 24 }, { h: 'شماره چک', t: 'text', w: 14 }, { h: 'بانک', t: 'text', w: 14 }, { h: 'سررسید', t: 'text', w: 12 }, { h: 'وضعیت', t: 'text', w: 12 }, { h: 'مبلغ (' + cur + ')', t: 'money', w: 18 }], rows, tones }] };
+}
+function statementText(S, partyId, n) {
+  const p = S.parties.find(x => x.id === partyId); if (!p) return '';
+  const b = partyBal(S, partyId), cur = S.settings.currency, shop = (S.profile && S.profile.name) || S.settings.shop || '';
+  const ds = S.docs.filter(d => d.partyId === partyId).sort(byTs).slice(-(n || 8));
+  const bt = Math.abs(b) < 1 ? 'تسویه' : (b > 0 ? 'بدهکار به ما: ' : 'طلبکار از ما: ') + mny(Math.abs(b)) + ' ' + cur;
+  const lines = ds.map(d => dateS(d.ts) + ' — ' + TYPE_FA[d.type] + (d.no ? ' ' + faS(d.no) : '') + ': ' + mny(d.total) + ' ' + cur);
+  return (shop ? shop + '\n' : '') + 'صورت‌حساب ' + p.name + '\n' + (lines.length ? lines.join('\n') + '\n' : '') + '— مانده تا ' + dateS(Date.now()) + ': ' + bt;
+}
 /* ---------------- همگام‌سازی ابری (منطق خالص) ---------------- */
 function chunkStr(str, n) { const out = []; for (let i = 0; i < str.length; i += n) out.push(str.slice(i, i + n)); return out.length ? out : ['']; }
 function isEmptyState(S) { return !S.docs.length && !S.parties.length && !S.products.length && !S.txns.length; }
@@ -1208,7 +1347,7 @@ function tabLedger() {
     rangeChips() +
     '<div class="status">' + status + '</div>' +
     '<div class="chips"><button class="chip tap' + (ui.sum === 'bal' ? ' on' : '') + '" data-a="sum" data-id="bal">مانده</button><button class="chip tap' + (ui.sum === 'sp' ? ' on' : '') + '" data-a="sum" data-id="sp">فروش و سود</button>' + repChip('rep-ledger') + '</div></div>';
-  const body = '<div class="wrap">' + srow('<div class="search">' + ico('search', 20) + '<input data-in="q" placeholder="' + (ui.sub === 'parties' ? 'جستجوی نام یا شماره همراه' : 'جستجوی طرف‌حساب یا توضیحات') + '" value="' + esc(ui.q) + '"></div>', ui.sub === 'parties' ? 'parties' : 'txns') + '<div id="list">' + ledgerList() + '</div></div>';
+  const body = '<div class="wrap">' + remBanner() + srow('<div class="search">' + ico('search', 20) + '<input data-in="q" placeholder="' + (ui.sub === 'parties' ? 'جستجوی نام یا شماره همراه' : 'جستجوی طرف‌حساب یا توضیحات') + '" value="' + esc(ui.q) + '"></div>', ui.sub === 'parties' ? 'parties' : 'txns') + '<div id="list">' + ledgerList() + '</div></div>';
   return head + body + '<div class="fabs"><button class="fab-x tap" data-a="newparty">طرف‌حساب جدید</button><button class="fab tap" data-a="fab" aria-label="ثبت جدید">' + ico('plus', 28) + '</button></div>';
 }
 function ledgerList() {
@@ -1226,12 +1365,13 @@ function ledgerList() {
   if (!ds.length) return empty('تراکنشی پیدا نشد', 'فروش، خرید و دریافت و پرداخت‌ها اینجا نمایش داده می‌شن.');
   return '<div class="count">' + fa(ds.length) + ' مورد</div>' + docListH(ds, flatSort('txns'));
 }
-const DT = { sale: ['فروش', 'tag', 'green', 1], buy: ['خرید', 'cart', 'red', -1], receipt: ['دریافت', 'inn', 'green', 1], payment: ['پرداخت', 'out', 'red', -1], income: ['درآمد', 'inn', 'green', 1], expense: ['هزینه', 'out', 'red', -1], ppay: ['پرداخت به شریک', 'users', 'amber', -1], vpay: ['پرداخت به ویزیتور', 'brief', 'amber', -1], vsal: ['حقوق ویزیتور', 'brief', 'amber', 0], sret: ['مرجوعی فروش', 'undo', 'amber', -1] };
+const DT = { sale: ['فروش', 'tag', 'green', 1], buy: ['خرید', 'cart', 'red', -1], receipt: ['دریافت', 'inn', 'green', 1], payment: ['پرداخت', 'out', 'red', -1], income: ['درآمد', 'inn', 'green', 1], expense: ['هزینه', 'out', 'red', -1], ppay: ['پرداخت به شریک', 'users', 'amber', -1], vpay: ['پرداخت به ویزیتور', 'brief', 'amber', -1], vsal: ['حقوق ویزیتور', 'brief', 'amber', 0], sret: ['مرجوعی فروش', 'undo', 'amber', -1], adj: ['اصلاح موجودی', 'box', 'amber', 0] };
 function docTitle(d) {
   const t = DT[d.type][0];
   if (d.type === 'sale' || d.type === 'buy' || d.type === 'sret') return t + ' ' + fa(d.no) + ' • ' + ((party(d.partyId) || {}).name || '');
   if (d.type === 'receipt' || d.type === 'payment') return t + ' • ' + ((party(d.partyId) || {}).name || '');
   if (d.type === 'income' || d.type === 'expense') return t + ' • ' + ((S.cats.find(c => c.id === d.catId) || {}).name || '');
+  if (d.type === 'adj') return t;
   if (d.type === 'ppay') return t + ' • ' + ((partner(d.partnerId) || {}).name || '');
   return t + ' • ' + ((visitor(d.visitorId) || {}).name || '');
 }
@@ -1255,7 +1395,7 @@ function docListH(ds, flat) {
 function tabInventory() {
   const val = S.products.reduce((s, p) => s + L.stockValue(S, p.id), 0);
   const q = ui.q.trim();
-  const head = '<div class="top"><h1>انبار محصولات</h1><div class="status"><div class="lbl">ارزش کالای موجود (به قیمت خرید)</div><div class="val">' + mu(val) + '</div></div><div class="chips">' + repChip('rep-inv') + '</div></div>';
+  const head = '<div class="top"><h1>انبار محصولات</h1><div class="status"><div class="lbl">ارزش کالای موجود (به قیمت خرید)</div><div class="val">' + mu(val) + '</div></div><div class="chips">' + repChip('rep-inv') + '<button class="chip tap" data-a="go-stocktake">انبارگردانی</button></div></div>';
   return head + '<div class="wrap">' + srow('<div class="search">' + ico('search', 20) + '<input data-in="q" placeholder="جستجوی نام محصول" value="' + esc(ui.q) + '"></div>', 'inv') + '<div id="list">' + invList() + '</div></div>' +
     '<div class="fabs"><button class="fab-x tap" data-a="newprod">محصول جدید</button><button class="fab tap" data-a="fab" aria-label="ثبت جدید">' + ico('plus', 28) + '</button></div>';
 }
@@ -1291,7 +1431,7 @@ function tabMoney() {
 }
 
 function tabMore() {
-  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
   return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' +
     '<div class="hint" style="text-align:center;margin-top:18px">نسخه ۴ • برای استفاده روی چند دستگاه، همگام‌سازی ابری را روشن کن</div></div>';
 }
@@ -1380,13 +1520,13 @@ I.ftime = t => { const [h, m] = (t.value || '0:0').split(':').map(Number); const
 /* ---------- طرف‌حساب ---------- */
 function partySheet(id, cb) {
   const p = id ? party(id) : { name: '', mobile: '', nid: '', postal: '', address: '' };
-  const w = openSheet('<h3 class="st">' + (id ? 'پروفایل ' + esc(p.name) : 'طرف‌حساب جدید') + '</h3>' + field('نام *', 'pn', p.name) + field('موبایل', 'pm', p.mobile, { num: 1 }) + field('کد ملی', 'pi', p.nid, { num: 1 }) + field('کد پستی', 'pz', p.postal, { num: 1 }) + area('آدرس', 'pa', p.address) +
+  const w = openSheet('<h3 class="st">' + (id ? 'پروفایل ' + esc(p.name) : 'طرف‌حساب جدید') + '</h3>' + field('نام *', 'pn', p.name) + field('موبایل', 'pm', p.mobile, { num: 1 }) + field('کد ملی', 'pi', p.nid, { num: 1 }) + field('کد پستی', 'pz', p.postal, { num: 1 }) + area('آدرس', 'pa', p.address) + field('سقف اعتبار بدهی (اختیاری، ' + cur() + ')', 'plm', p.limit ? fa(grp(p.limit)) : '', { money: 1 }) +
     '<div class="pr"><button class="btn tap" data-a="p-save">ثبت</button></div>' + (id && !S.docs.some(d => d.partyId === id) ? '<div class="pr"><button class="btn danger tap" data-a="p-del">حذف طرف‌حساب</button></div>' : ''));
   w._cb = cb; w._id = id;
 }
 A['p-save'] = t => {
   const w = t.closest('.sw'), name = $('#pn', w).value.trim(); if (!name) return toast('نام را وارد کن.', 1);
-  const v = { name, mobile: fa(en($('#pm', w).value)), nid: fa(en($('#pi', w).value)), postal: fa(en($('#pz', w).value)), address: $('#pa', w).value.trim() };
+  const v = { name, mobile: fa(en($('#pm', w).value)), nid: fa(en($('#pi', w).value)), postal: fa(en($('#pz', w).value)), address: $('#pa', w).value.trim(), limit: num($('#plm', w).value) || 0 };
   let p; if (w._id) { p = party(w._id); Object.assign(p, v); } else { p = { id: L.uid(), ledgerId: S.activeLedger, ...v }; S.parties.push(p); }
   save(); const cb = w._cb; closeSheet(w); render(); if (cb) cb(p);
 };
@@ -1410,12 +1550,15 @@ function openParty(id) {
     p.el.querySelector('h2').textContent = pt.name;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">وضعیت</div><div style="font-size:20px;font-weight:700" class="' + b.c + '">' + (b.amt || 'تسویه') + ' <small style="font-size:13px">' + (b.amt ? b.t + ' هستم' : '') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><button class="btn tap" data-a="pp-sale">' + ico('tag', 20) + 'فروش</button><button class="btn tap" data-a="pp-buy">' + ico('cart', 20) + 'خرید</button><button class="btn ghost tap" data-a="pp-rec">پول گرفتم</button><button class="btn ghost tap" data-a="pp-pay">پول دادم</button></div><button class="btn ghost tap" data-a="pp-ret" style="margin-top:8px">' + ico('undo', 20) + 'مرجوعی (برگشت کالا به انبار)</button>' +
+      '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button></div>' + partyInfoH(pt) +
       (pt.mobile || pt.address ? '<div class="boxes g2" style="margin-top:8px">' + (pt.mobile ? '<div class="cell"><small>موبایل</small><b>' + esc(pt.mobile) + '</b></div>' : '') + (pt.address ? '<div class="cell"><small>آدرس</small><b>' + esc(pt.address) + '</b></div>' : '') + '</div>' : '') +
-      crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('تراکنشی نیست'));
+      partyGallery(id) + crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('تراکنشی نیست'));
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pp-edit">ویرایش پروفایل</button><button class="btn ghost tap" data-a="pp-rep">' + ico('file', 18) + 'صورت‌حساب</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
+function partyInfoH(pt) { const chs = (S.cheques || []).filter(c => c.partyId === pt.id && c.status === 'open'), tot = chs.reduce((s, c) => s + c.amount, 0), b = L.partyBal(S, pt.id); let h = ''; if (pt.limit > 0) h += '<div class="hint ' + (b > pt.limit ? 'bad' : '') + '">سقف اعتبار: ' + mu(pt.limit) + (b > pt.limit ? ' — از سقف گذشته' : '') + '</div>'; if (chs.length) h += '<div class="hint">چک در جریان: ' + fa(chs.length) + ' مورد، جمعاً ' + mu(tot) + '</div>'; return h; }
+A['pp-chq'] = t => chequeSheet(null, t.closest('.page')._id);
 A['pp-edit'] = t => partySheet(t.closest('.page')._id);
 A['pp-sale'] = t => openInvoice('sale', { partyId: t.closest('.page')._id }); A['pp-buy'] = t => openInvoice('buy', { partyId: t.closest('.page')._id });
 A['pp-rec'] = t => cashForm('receipt', t.closest('.page')._id); A['pp-pay'] = t => cashForm('payment', t.closest('.page')._id);
@@ -1432,23 +1575,18 @@ function prodSheet(id, cb) {
   const ul = UNITS.includes(p.unit) ? UNITS : UNITS.concat([p.unit]);
   const w = openSheet('<h3 class="st">' + (id ? 'ویرایش محصول' : 'محصول جدید') + '</h3>' + field('نام محصول *', 'gn', p.name) +
     '<div class="f"><label>واحد شمارش</label><div style="padding-top:8px">' + chipsH('punit', ul.map(u => [u, u]), p.unit) + '</div></div>' + field('یا واحد دلخواه (اختیاری)', 'gu', '').replace('autocomplete', 'data-in="gu" autocomplete') +
-    '<div class="f"><label>دسته‌بندی</label><div style="padding-top:8px">' + chipsH('pcat', (S.settings.pcats || []).map(u => [u, u]), p.cat || '') + '</div></div>' + field('دسته‌بندی دلخواه (خودت بنویس)', 'gc', p.cat || '') + field('هشدار موجودی کم (اختیاری)', 'gm', p.min || '', { num: 1 }) +
+    '<div class="f"><label>دسته‌بندی</label><div style="padding-top:8px">' + chipsH('pcat', (S.settings.pcats || []).map(u => [u, u]), p.cat || '') + '</div></div>' + field('دسته‌بندی دلخواه (خودت بنویس)', 'gc', p.cat || '') + field('هشدار موجودی کم (اختیاری)', 'gm', p.min || '', { num: 1 }) + '<div class="f"><label for="gbc">بارکد (اختیاری)</label><div style="display:flex;gap:8px"><input id="gbc" inputmode="numeric" value="' + esc(p.barcode || '') + '" autocomplete="off" style="flex:1"><button type="button" class="sbtn tap" data-a="g-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div></div>' +
     '<div class="pr"><button class="btn tap" data-a="g-save">ثبت</button></div>' + (id && !S.batches.some(b => b.pid === id) && !S.docs.some(d => (d.items || []).some(i => i.pid === id)) ? '<div class="pr"><button class="btn danger tap" data-a="g-del">حذف محصول</button></div>' : ''));
   w._cb = cb; w._id = id;
 }
 A['g-save'] = t => {
   const w = t.closest('.sw'), name = $('#gn', w).value.trim(); if (!name) return toast('نام محصول را وارد کن.', 1);
   const cat = $('#gc', w).value.trim(); if (cat && !(S.settings.pcats || []).includes(cat)) (S.settings.pcats = S.settings.pcats || []).push(cat);
-  const v = { name, unit: pf.unit, min: num($('#gm', w).value) || 0, cat };
+  const v = { name, unit: pf.unit, min: num($('#gm', w).value) || 0, cat, barcode: fa(en($('#gbc', w).value.trim())) };
   let p; if (w._id) { p = prod(w._id); Object.assign(p, v); } else { p = { id: L.uid(), ...v }; S.products.push(p); }
   save(); const cb = w._cb; closeSheet(w); render(); if (cb) cb(p);
 };
 A['g-del'] = t => { const w = t.closest('.sw'), id = w._id; closeSheet(w); S.products = S.products.filter(p => p.id !== id); save(); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); };
-function pickProduct(cb, kind) {
-  const w = openSheet('<h3 class="st">انتخاب محصول</h3><div class="list" id="gl"></div><div class="pr"><button class="btn ghost tap" data-a="gp-new">محصول جدید</button></div>');
-  $('#gl', w).innerHTML = S.products.map(p => { const st = L.stockOf(S, p.id); return rowH({ a: 'gp-pick', id: p.id, title: p.name, icon: 'box', av: kind === 'sale' && st <= 0 ? 'red' : '', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', '', st > 0 ? '' : 'neg') }); }).join('') || '<div class="hint" style="text-align:center">هنوز محصولی تعریف نشده.</div>';
-  w._cb = cb;
-}
 A['gp-pick'] = t => { const w = t.closest('.sw'), cb = w._cb; closeSheet(w); cb(prod(t.dataset.id)); };
 A['gp-new'] = t => { const w = t.closest('.sw'), cb = w._cb; closeSheet(w); prodSheet(null, cb); };
 
@@ -1537,48 +1675,50 @@ function ledgerSheet(id) {
   w._id = id;
 }
 A['ls-save'] = t => { const w = t.closest('.sw'), name = $('#ln', w).value.trim(); if (!name) return toast('نام دفتر را وارد کن.', 1); if (w._id) S.ledgers.find(x => x.id === w._id).name = name; else S.ledgers.push({ id: L.uid(), name }); save(); closeSheet(w); render(); };
-A['ls-del'] = t => { const w = t.closest('.sw'), id = w._id; closeSheet(w); S.ledgers = S.ledgers.filter(x => x.id !== id); save(); render(); };
+A['ls-del'] = t => { const w = t.closest('.sw'), id = w._id; closeSheet(w); snapBefore('قبل از حذف دفتر'); S.ledgers = S.ledgers.filter(x => x.id !== id); save(); render(); };
 
 /* ---------- دریافت/پرداخت و درآمد/هزینه ---------- */
 function cashForm(type, partyId) {
+  ATT.cash = [];
   cf = { ts: Date.now(), partyId: partyId || '', type };
   const w = openSheet('<h3 class="st">' + (type === 'receipt' ? 'پول گرفتم' : 'پول دادم') + '</h3><div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="cs-party"><span id="cps">' + (partyId ? esc(party(partyId).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
-    field('مبلغ (' + cur() + ') *', 'cam', '', { money: 1 }) + select('حساب', 'cac', accOpts(), (S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'cnt', '') + '<div class="pr"><button class="btn tap" data-a="cs-save">ثبت</button></div>');
+    field('مبلغ (' + cur() + ') *', 'cam', '', { money: 1 }) + select('حساب', 'cac', accOpts(), (S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'cnt', '') + attSec('cash') + '<div class="pr"><button class="btn tap" data-a="cs-save">ثبت</button></div>');
   w._f = cf;
 }
 A['cs-party'] = () => pickParty(p => { cf.partyId = p.id; $('#cps').textContent = p.name; });
 A['cs-save'] = t => {
   const w = t.closest('.sw');
-  const r = L.addCashDoc(S, cf.type, { ledgerId: S.activeLedger, partyId: cf.partyId, amount: num($('#cam', w).value), accountId: $('#cac', w).value, ts: cf.ts, note: $('#cnt', w).value.trim() });
+  const r = L.addCashDoc(S, cf.type, { ledgerId: S.activeLedger, partyId: cf.partyId, amount: num($('#cam', w).value), accountId: $('#cac', w).value, ts: cf.ts, note: $('#cnt', w).value.trim(), att: (ATT.cash || []).slice() });
   if (done(r, 'ثبت شد')) { closeSheet(w); render(); }
 };
 function moneyForm(kind, catId) {
+  ATT.cash = [];
   cf = { ts: Date.now() };
   const cats = S.cats.filter(c => c.kind === kind);
   const w = openSheet('<h3 class="st">' + (kind === 'income' ? 'ثبت درآمد' : 'ثبت هزینه') + '</h3>' + select('دسته‌بندی', 'mcat', cats.map(c => [c.id, c.name]), catId || (cats[0] || {}).id) +
-    field('مبلغ (' + cur() + ') *', 'mam', '', { money: 1 }) + select('حساب', 'mac', accOpts(), (S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'mnt', '') + '<div class="pr"><button class="btn tap" data-a="ms-save">ثبت</button></div>');
+    field('مبلغ (' + cur() + ') *', 'mam', '', { money: 1 }) + select('حساب', 'mac', accOpts(), (S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'mnt', '') + attSec('cash') + '<div class="pr"><button class="btn tap" data-a="ms-save">ثبت</button></div>');
   w._kind = kind;
 }
 A['ms-save'] = t => {
   const w = t.closest('.sw');
-  const r = L.addMoney(S, { kind: w._kind, catId: $('#mcat', w).value, amount: num($('#mam', w).value), accountId: $('#mac', w).value, ts: cf.ts, note: $('#mnt', w).value.trim(), ledgerId: S.activeLedger });
+  const r = L.addMoney(S, { kind: w._kind, catId: $('#mcat', w).value, amount: num($('#mam', w).value), accountId: $('#mac', w).value, ts: cf.ts, note: $('#mnt', w).value.trim(), ledgerId: S.activeLedger, att: (ATT.cash || []).slice() });
   if (done(r, 'ثبت شد')) { closeSheet(w); render(); }
 };
 
 /* ---------- فاکتور فروش و خرید ---------- */
 let inv = null;
-function lastSalePrice(pid) { const ds = S.docs.filter(d => d.type === 'sale' && d.items.some(i => i.pid === pid)).sort((a, b) => b.ts - a.ts || b.seq - a.seq); return ds.length ? ds[0].items.find(i => i.pid === pid).price : 0; }
+function lastSalePrice(pid, partyId) { let ds = S.docs.filter(d => d.type === 'sale' && d.items.some(i => i.pid === pid) && (!partyId || d.partyId === partyId)); if (partyId && !ds.length) ds = S.docs.filter(d => d.type === 'sale' && d.items.some(i => i.pid === pid)); ds = ds.sort((a, b) => b.ts - a.ts || b.seq - a.seq); return ds.length ? ds[0].items.find(i => i.pid === pid).price : 0; }
 function openInvoice(kind, o) {
   o = o || {};
   const edit = o.editId ? S.docs.find(d => d.id === o.editId) : null;
-  const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value })), note: edit.note || '' }
-    : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '' };
+  const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value })), note: edit.note || '', att: (edit.att || []).slice(), dueTs: edit.dueTs || null }
+    : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '', att: [], dueTs: null };
   inv = { kind, editId: o.editId || null, d, no: edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
   cf = d;
   inv.page = openPage({ title: (kind === 'sale' ? 'فروش' : 'خرید') + (edit ? ' (ویرایش)' : ''), cls: kind, body: invBody(), foot: '<button class="btn tap" data-a="inv-save">ثبت</button>' });
   invUpd();
 }
-chipH.pay = v => { inv.d.payType = v; const a = $('#accw'); if (a) a.hidden = v === 'credit'; if (v !== 'credit') { inv.d.accountId = defAcct(v); const sel = $('#iac'); if (sel) sel.value = inv.d.accountId; } };
+chipH.pay = v => { inv.d.payType = v; const dw = $('#duew'); if (dw) dw.hidden = v !== 'credit'; setTimeout(invUpd, 0); const a = $('#accw'); if (a) a.hidden = v === 'credit'; if (v !== 'credit') { inv.d.accountId = defAcct(v); const sel = $('#iac'); if (sel) sel.value = inv.d.accountId; } };
 chipH.fby = v => { inv.d.freightBy = v; invUpd(); };
 chipH.fmode = v => { inv.d.freightMode = v; const a = $('#facc'); if (a) a.hidden = v !== 'acct'; invUpd(); };
 I.ifr = t => { moneyFmt(t); inv.d.freight = num(t.value); invUpd(); };
@@ -1598,15 +1738,18 @@ function invBody() {
     '<div class="f" style="margin-top:6px"><label>شماره فاکتور</label><div class="pick" style="justify-content:center">' + fa(inv.no) + '</div></div></div>' +
     '<div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="inv-party"><span>' + (pt ? esc(pt.name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     (pt ? '<div class="hint ' + (balText(L.partyBal(S, pt.id)).c) + '">' + (Math.abs(L.partyBal(S, pt.id)) < 1 ? 'تسویه' : balText(L.partyBal(S, pt.id)).t + ': ' + balText(L.partyBal(S, pt.id)).amt) + '</div>' : '') +
-    '<div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button></div>' +
+    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button></div>' +
     '<div class="box sec" id="tot"></div>' +
     discBlock(d) +
     '<button class="chk tap" data-a="inv-tax" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="taxb">' + ico('check', 16) + '</span><span>مالیات بر ارزش افزوده (' + fa(S.settings.taxRate) + '٪)</span></button>' +
     (sale ? field('هزینه‌های جانبی (به مشتری اضافه می‌شود)', 'iex', d.extra ? fa(grp(d.extra)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iex"') : freightBlock(d)) +
     '<div class="box sec"><b>نحوه‌ی تسویه</b><div style="margin-top:8px">' + chipsH('pay', [['cash', 'نقدی'], ['pos', 'کارتخوان'], ['bank', 'به حساب بانکی'], ['credit', 'نسیه']], d.payType) + '</div><div id="accw" ' + (d.payType !== 'credit' ? '' : 'hidden') + '>' + select('حساب', 'iac', accOpts(), d.accountId).replace('<select', '<select data-in="iac"') + '</div></div>' +
     (sale ? (S.visitors.length ? select('ویزیتور (اختیاری)', 'ivs', [['', 'بدون ویزیتور']].concat(S.visitors.map(v => [v.id, v.name])), d.visitorId).replace('<select', '<select data-in="ivs"') : '') + '<div class="box sec" id="profit"></div>' : '') +
-    area('توضیحات', 'inote', d.note).replace('<textarea', '<textarea data-in="inote"');
+    '<div class="box sec" id="duew" ' + (d.payType === 'credit' ? '' : 'hidden') + '><div class="mrow"><b>سررسید تسویه (اختیاری)</b><span id="duet" class="mut">' + (d.dueTs ? fdate(d.dueTs) : 'بدون سررسید') + '</span></div><div class="chips ivc" style="flex-wrap:wrap;margin-top:8px"><button class="chip tap" data-a="inv-dued" data-d="7">۷ روز</button><button class="chip tap" data-a="inv-dued" data-d="15">۱۵ روز</button><button class="chip tap" data-a="inv-dued" data-d="30">۳۰ روز</button><button class="chip tap" data-a="inv-duep">تاریخ دلخواه</button><button class="chip tap" data-a="inv-dued" data-d="0">حذف</button></div><div class="hint">برای این سررسید یادآوری در برنامه نشان داده می‌شود.</div></div>' +
+    attSec('inv') + area('توضیحات', 'inote', d.note).replace('<textarea', '<textarea data-in="inote"');
 }
+A['inv-dued'] = t => { const n = +t.dataset.d; inv.d.dueTs = n ? L.dayStart(Date.now()) + n * 864e5 + 12 * 36e5 : null; $('#duet').textContent = inv.d.dueTs ? fdate(inv.d.dueTs) : 'بدون سررسید'; };
+A['inv-duep'] = () => pickDate(inv.d.dueTs || Date.now(), ts => { inv.d.dueTs = L.dayStart(ts) + 12 * 36e5; $('#duet').textContent = fdate(inv.d.dueTs); });
 function discBlock(d) {
   return '<div class="box sec"><b>تخفیف</b><div style="margin-top:8px">' + chipsH('dmode', [['amount', 'مبلغی (' + cur() + ')'], ['percent', 'درصدی']], d.discMode) + '</div>' +
     '<div class="f"><label id="idvl" for="idv">' + (d.discMode === 'percent' ? 'درصد تخفیف (٪)' : 'مبلغ تخفیف (' + cur() + ')') + '</label><input id="idv" data-in="idv" inputmode="decimal" value="' + (d.discVal ? (d.discMode === 'percent' ? fa(String(d.discVal)) : fa(grp(d.discVal))) : '') + '" placeholder="بدون تخفیف" autocomplete="off"></div></div>';
@@ -1634,6 +1777,7 @@ function invUpd() {
     const pp = !sale && i.partners && i.partners.length ? '<div class="b2"><span>' + i.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') + '</span></div>' : '';
     return '<button class="it tap" data-a="inv-edit" data-i="' + n + '"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span>' + mu(Math.round(i.qty * i.price)) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + ' × ' + money(i.price) + '</span>' + (it ? '<span>سود ' + money(it.profit) + '</span>' : (ci && ci.fpu > 0 ? '<span>تمام‌شده ' + money(ci.unitCost) + '</span>' : '')) + '</div>' + pp + '</button>';
   }).join('') || '<div class="hint" style="text-align:center;padding:10px">هنوز محصولی اضافه نشده.</div>';
+  { const le = $('#lim'), pt2 = party(d.partyId); let h2 = ''; if (le && sale && pt2 && pt2.limit > 0 && d.payType === 'credit') { const old = inv.editId ? S.pent.filter(e => e.ref === inv.editId && e.partyId === pt2.id).reduce((a, e) => a + e.delta, 0) : 0, after = L.partyBal(S, pt2.id) - old + total; if (after > pt2.limit) h2 = '<div class="warn-note">با این فاکتور بدهی ' + esc(pt2.name) + ' به ' + mu(after) + ' می‌رسد و از سقف اعتبار (' + mu(pt2.limit) + ') بیشتر می‌شود.</div>'; } if (le) le.innerHTML = h2; }
   const tb = $('#taxb').parentNode; tb.classList.toggle('on', d.taxOn); tb.style.background = d.taxOn ? 'var(--accent)' : 'var(--card)'; tb.style.color = d.taxOn ? '#fff' : 'var(--fg)';
   $('#tot').innerHTML = '<div class="lines"><div class="line"><span>جمع قیمت محصولات</span><b>' + mu(gross) + '</b></div>' + (disc ? '<div class="line"><span>تخفیف' + (d.discMode === 'percent' ? ' (' + fa(d.discVal) + '٪)' : '') + '</span><b class="neg">−' + mu(disc) + '</b></div>' : '') + (dc.error ? '<div class="hint bad">' + esc(dc.error) + '</div>' : '') + (tax ? '<div class="line"><span>مالیات</span><b>' + mu(tax) + '</b></div>' : '') + (extra ? '<div class="line"><span>هزینه‌های جانبی</span><b>' + mu(extra) + '</b></div>' : '') + (freight ? '<div class="line"><span>کرایه بار' + (fInv ? '' : ' <small>(پرداخت جدا)</small>') + '</span><b>' + mu(freight) + '</b></div>' : '') + '<div class="line big"><span>جمع فاکتور</span><span class="' + (sale ? 'pos' : 'neg') + '">' + mu(total) + '</span></div></div>';
   if (sale) {
@@ -1653,8 +1797,9 @@ function invUpd() {
 }
 A['inv-rmp'] = t => { inv.d.partners = inv.d.partners.filter(x => x.partnerId !== t.dataset.id); invUpd(); };
 A['inv-save'] = () => {
-  const r = (inv.kind === 'sale' ? L.addSale : L.addBuy)(S, inv.d, inv.editId);
-  if (done(r, 'فاکتور ثبت شد')) { const p = inv.page; p.el.remove(); pages.splice(pages.indexOf(p.el), 1); render(); }
+  const go_ = () => { const r = (inv.kind === 'sale' ? L.addSale : L.addBuy)(S, inv.d, inv.editId); if (done(r, 'فاکتور ثبت شد')) { const p = inv.page; p.el.remove(); pages.splice(pages.indexOf(p.el), 1); render(); } };
+  if (document.querySelector('#lim .warn-note')) return ask('بدهی مشتری از سقف اعتبار بیشتر می‌شود. با این حال ثبت شود؟', 'ثبت', go_);
+  go_();
 };
 /* اقلام */
 let it = null; chipH.dummy = () => {};
@@ -1682,7 +1827,7 @@ function itInfo() {
 }
 A['it-prod'] = () => pickProduct(p => {
   it.pid = p.id; $('#itn', it.w).textContent = p.name;
-  const price = inv.kind === 'sale' ? lastSalePrice(p.id) : L.lastBuyPrice(S, p.id);
+  const price = inv.kind === 'sale' ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id);
   if (price && !num($('#ip', it.w).value)) $('#ip', it.w).value = fa(grp(price));
   itInfo();
 }, inv.kind);
@@ -1745,15 +1890,16 @@ function openDoc(id) {
           (d.visitorComm ? '<div class="line"><span>پورسانت ' + esc((visitor(d.visitorId) || {}).name) + '</span><b>' + mu(d.visitorComm) + '</b></div>' : '') +
           '<div class="line big"><span>سهم شما</span><span>' + mu(d.ownerShare) + '</span></div></div></div>';
       }
-    } else h += '<div class="box sec"><div class="mrow"><b>مبلغ</b><b>' + mu(d.total) + '</b></div></div>';
-    p.body.innerHTML = h;
+    } else if (d.type === 'adj') h += adjHtml(d); else h += '<div class="box sec"><div class="mrow"><b>مبلغ</b><b>' + mu(d.total) + '</b></div></div>';
+    if (d.dueTs && d.payType === 'credit') h += '<div class="hint">سررسید تسویه: <b>' + fdate(d.dueTs) + '</b> (' + dueText(dayDiff(d.dueTs)) + ')</div>';
+    p.body.innerHTML = h + attSec('doc:' + id);
   };
   const d0 = S.docs.find(x => x.id === id), edit = d0.type === 'sale' || d0.type === 'buy';
   const p = openPage({ title: '', cls: d0.type === 'sale' ? 'sale' : d0.type === 'buy' ? 'buy' : '', body: '', foot: (d0.type === 'sale' || d0.type === 'buy' || d0.type === 'sret' ? '<button class="btn ghost tap" data-a="d-inv">' + ico('file', 18) + (d0.type === 'sret' ? 'رسید' : 'فاکتور') + '</button>' : '') + (edit ? '<button class="btn tap" data-a="d-edit">ویرایش</button>' : '') + '<button class="btn danger tap" data-a="d-del">حذف</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['d-edit'] = t => { const pg = t.closest('.page'), id = pg._id, k = S.docs.find(d => d.id === id).type; pg.remove(); pages.splice(pages.indexOf(pg), 1); openInvoice(k, { editId: id }); };
-A['d-del'] = t => { const pg = t.closest('.page'), id = pg._id; ask('این مورد حذف شود؟ موجودی و حساب‌ها برمی‌گردند.', 'حذف', () => { if (done(L.deleteDoc(S, id), 'حذف شد')) { pg.remove(); pages.splice(pages.indexOf(pg), 1); render(); } }, 1); };
+A['d-del'] = t => { const pg = t.closest('.page'), id = pg._id; ask('این مورد حذف شود؟ موجودی و حساب‌ها برمی‌گردند.', 'حذف', () => { snapBefore('قبل از حذف ' + ((DT[(S.docs.find(x => x.id === id) || {}).type] || [''])[0])); if (done(L.deleteDoc(S, id), 'حذف شد')) { pg.remove(); pages.splice(pages.indexOf(pg), 1); render(); } }, 1); };
 
 /* ---------- شرکا ---------- */
 let pg_ = null; chipH.sm = v => { pg_.mode = v; const l = $('#sml', pg_.w); if (l) l.textContent = v === 'percent' ? 'درصد پیش‌فرض (٪)' : 'مبلغ پیش‌فرض به‌ازای هر واحد (' + cur() + ')'; };
@@ -1871,10 +2017,12 @@ function rpDraw() {
     (S.ledgers.length > 1 ? '<div class="f"><label>دفتر</label><div style="padding-top:8px">' + chipsH('rl', [['all', 'همه']].concat(S.ledgers.map(l => [l.id, esc(l.name)])), rp.ledger) + '</div></div>' : '') +
     '<div class="box sec"><div class="lines">' + row('تعداد فاکتور فروش', fa(s.count)) + row('جمع فروش (بدون مالیات)', mu(s.rev)) + row('بهای تمام‌شده', mu(s.cost)) + '<div class="line big"><span>سود کل</span><span class="' + (s.profit < 0 ? 'neg' : 'pos') + '">' + mu(s.profit) + '</span></div></div></div>' +
     '<div class="box sec"><h3 style="margin:0 0 6px;font-size:14px">تقسیم سود</h3><div class="lines">' + s.partners.map(p => row('سهم ' + esc(p.name), mu(p.amount))).join('') + row('پورسانت ویزیتورها (از سهم شما)', mu(s.comm)) + row('سهم شما قبل از هزینه‌ها', mu(s.owner), 'pos') + '</div>' + (s.count ? '<div class="' + (ok ? 'ok-note' : 'warn-note') + '">' + (ok ? 'سود کل = سهم شما + شرکا + ویزیتورها ✓' : 'جمع سهم‌ها با سود کل نمی‌خواند.') + '</div>' : '') + '</div>' +
-    '<div class="box sec"><h3 style="margin:0 0 6px;font-size:14px">سود خالص شما</h3><div class="lines">' + row('سهم شما', mu(s.owner)) + row('حقوق ویزیتورها', mu(-s.salary), 'neg') + row('درآمدهای جانبی', mu(s.inc), 'pos') + row('هزینه‌ها', mu(-s.exp), 'neg') + '<div class="line big"><span>خالص</span><span class="' + (s.net < 0 ? 'neg' : 'pos') + '">' + mu(s.net) + '</span></div></div></div>' +
+    '<div class="box sec"><h3 style="margin:0 0 6px;font-size:14px">سود خالص شما</h3><div class="lines">' + row('سهم شما', mu(s.owner)) + row('حقوق ویزیتورها', mu(-s.salary), 'neg') + row('درآمدهای جانبی', mu(s.inc), 'pos') + row('هزینه‌ها', mu(-s.exp), 'neg') + (s.adjLoss ? row('کسری/اضافی انبارگردانی', mu(-s.adjLoss), s.adjLoss > 0 ? 'neg' : 'pos') : '') + '<div class="line big"><span>خالص</span><span class="' + (s.net < 0 ? 'neg' : 'pos') + '">' + mu(s.net) + '</span></div></div></div>' +
+    '<div class="box sec"><h3 style="margin:0 0 6px;font-size:14px">گزارش‌های بیشتر (اکسل / چاپ)</h3><div class="chips ivc" style="flex-wrap:wrap"><button class="chip tap" data-a="rp-more" data-k="aging">مطالبات و بدهی‌های معوق</button><button class="chip tap" data-a="rp-more" data-k="custp">سود هر مشتری</button><button class="chip tap" data-a="rp-more" data-k="chq">چک‌ها</button></div></div>' +
     '<div class="box sec"><h3 style="margin:0 0 6px;font-size:14px">سود به تفکیک محصول</h3>' + (s.byProduct.length ? '<table class="tbl"><tr><th>محصول</th><th>تعداد</th><th>سود</th></tr>' + s.byProduct.sort((a, b) => b.profit - a.profit).map(b => '<tr><td>' + esc((prod(b.pid) || {}).name) + '</td><td>' + qf(b.qty) + '</td><td>' + money(b.profit) + '</td></tr>').join('') + '</table>' : '<div class="hint">فروشی در این بازه نیست.</div>') + '</div>';
 }
 function openReports() { rpPage = openPage({ title: 'گزارش‌ها', body: '' }); rpDraw(); }
+A['rp-more'] = t => openReport(t.dataset.k, { ledgerId: S.activeLedger });
 
 /* ---------- تنظیمات ---------- */
 chipH.cur = v => { S.settings.currency = v; save(); render(); };
@@ -1895,9 +2043,9 @@ A['b-copy'] = () => { const el = $('#bexp'); el.select(); let ok = false; try { 
 A['b-restore'] = () => {
   const txt = $('#bimp').value.trim(); let o; try { o = JSON.parse(txt); } catch (e) { return toast('متن پشتیبان معتبر نیست.', 1); }
   if (!o || !o.v || !Array.isArray(o.docs)) return toast('این فایل پشتیبان این برنامه نیست.', 1);
-  ask('اطلاعات فعلی با پشتیبان جایگزین شود؟', 'بازیابی', () => { S = L.migrate(o); save(); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); toast('بازیابی شد'); }, 1);
+  ask('اطلاعات فعلی با پشتیبان جایگزین شود؟', 'بازیابی', () => { snapBefore('قبل از بازیابی پشتیبان'); S = L.migrate(o); save(); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); toast('بازیابی شد'); }, 1);
 };
-A['b-reset'] = () => ask('همه‌ی اطلاعات پاک شود؟ این کار برگشت ندارد.', 'پاک کردن همه چیز', () => { S = L.newState(); save(); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); toast('اطلاعات پاک شد'); }, 1);
+A['b-reset'] = () => ask('همه‌ی اطلاعات پاک شود؟ این کار برگشت ندارد.', 'پاک کردن همه چیز', () => { snapBefore('قبل از پاک کردن همه‌چیز'); S = L.newState(); save(); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); toast('اطلاعات پاک شد'); }, 1);
 function openBackup() {
   openPage({ title: 'پشتیبان‌گیری', body: '<div class="warn-note">اطلاعات فقط روی همین دستگاه و مرورگر ذخیره می‌شود. اگه برنامه پاک یا گوشی ریست شود، بدون پشتیبان از بین می‌رود. هفته‌ای یک بار پشتیبان بگیر و جایی امن ذخیره کن.</div>' +
     '<div class="sec"><h3>گرفتن پشتیبان</h3><textarea class="big" id="bexp" readonly>' + esc(JSON.stringify(S)) + '</textarea><button class="btn tap" data-a="b-copy" style="margin-top:8px">' + ico('copy', 18) + 'کپی متن پشتیبان</button><div class="hint">متن را در یادداشت‌ها، ایمیل یا پیام به خودت ذخیره کن.</div></div>' +
@@ -2078,7 +2226,7 @@ async function syncNow(quiet) {
     else if (plan === 'pull') { await syPull(meta); return; }
     else if (plan === 'conflict') { sync.busy = false; syNote('conflict', 'اطلاعات این دستگاه و ابر با هم فرق دارند.'); syConflict(meta); return; }
     else { sy.last = Date.now(); sySave(); }
-    syNote('ok', '');
+    syNote('ok', ''); syncImages().catch(() => {});
   } catch (e) { syNote('err', errFa(e)); }
   sync.busy = false; syDraw();
 }
@@ -2144,6 +2292,275 @@ A['sy-out'] = () => ask('از حساب خارج شوی؟ اطلاعات روی �
 window.addEventListener('online', () => syncNow());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) syncNow(); });
 if (fbCfg() && (sy.uid || sy.dirty)) fbInit().catch(() => {});
+
+/* تصاویر پیوست: هر تصویر یک سند جدا در ابر است */
+async function syFetchImg(id) {
+  if (!sync.user || !sync.fb) return null;
+  try { const { fs, db } = sync.fb, sn = await fs.getDoc(fs.doc(db, 'users', sync.user.uid, 'img', id)); if (sn.exists()) { const d = sn.data().d; await imgPut(id, d, true); return d; } } catch (e) {}
+  return null;
+}
+async function syncImages() {
+  if (!sync.user || !sync.fb) return; const { fs, db } = sync.fb, uid_ = sync.user.uid, refs = attRefs();
+  const all = (await idbOp('readonly', st => st.getAll()).catch(() => [])) || [];
+  for (const r of all) if (refs.has(r.id) && !r.up) { try { await fs.setDoc(fs.doc(db, 'users', uid_, 'img', r.id), { d: r.data, at: Date.now() }); await imgPut(r.id, r.data, true); } catch (e) { break; } }
+  const have = new Set(all.map(r => r.id)); for (const id of refs) if (!have.has(id)) await syFetchImg(id);
+  document.querySelectorAll('img[data-img]:not([src])').forEach(i => { delete i.dataset.h; }); hydrate();
+}
+
+/* ================= پیوست تصویر ================= */
+const IMGK = 5, ATT = {};
+let _idb = null;
+const idb = () => _idb || (_idb = new Promise((res, rej) => { try { const r = indexedDB.open('hesab-img', 1); r.onupgradeneeded = () => r.result.createObjectStore('imgs', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+const idbOp = (mode, fn) => idb().then(db => new Promise((res, rej) => { const t = db.transaction('imgs', mode), rq = fn(t.objectStore('imgs')); t.oncomplete = () => res(rq && rq.result); t.onerror = () => rej(t.error); }));
+const imgc = new Map();
+const imgPut = (id, data, up) => { imgc.set(id, data); return idbOp('readwrite', st => st.put({ id, data, up: up ? 1 : 0, ts: Date.now() })).catch(() => {}); };
+const imgGet = id => imgc.has(id) ? Promise.resolve(imgc.get(id)) : idbOp('readonly', st => st.get(id)).then(r => { if (r) { imgc.set(id, r.data); return r.data; } return null; }).catch(() => null);
+function imgCompress(file) {
+  return new Promise((res, rej) => { const rd = new FileReader(); rd.onerror = () => rej(rd.error);
+    rd.onload = () => { const im = new Image(); im.onerror = () => rej(new Error('bad')); im.onload = () => { const k = Math.min(1, 1280 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.width * k)); c.height = Math.max(1, Math.round(im.height * k)); const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(im, 0, 0, c.width, c.height); res(c.toDataURL('image/jpeg', 0.72)); }; im.src = rd.result; };
+    rd.readAsDataURL(file); });
+}
+const attPersist = k => k.startsWith('doc:') || k.startsWith('chk:');
+function attGet(k) {
+  if (k === 'inv') return inv.d.att || (inv.d.att = []);
+  if (k === 'cash' || k === 'chq') return ATT[k] || (ATT[k] = []);
+  if (k.startsWith('doc:')) { const d = S.docs.find(x => x.id === k.slice(4)); return d ? (d.att || (d.att = [])) : []; }
+  if (k.startsWith('chk:')) { const c = (S.cheques || []).find(x => x.id === k.slice(4)); return c ? (c.att || (c.att = [])) : []; }
+  return [];
+}
+function attHtml(k, ro) {
+  const ids = attGet(k);
+  return '<div class="atts" data-k="' + k + '" data-ro="' + (ro ? 1 : 0) + '">' + ids.map(id => '<button type="button" class="att tap" data-a="att-view" data-k="' + k + '" data-id="' + id + '" data-ro="' + (ro ? 1 : 0) + '" aria-label="مشاهده تصویر"><img data-img="' + id + '" alt=""></button>').join('') +
+    (!ro && ids.length < IMGK ? '<button type="button" class="att add tap" data-a="att-add" data-k="' + k + '" aria-label="افزودن تصویر">+</button>' : '') + '</div>';
+}
+const attSec = (k, ro, title) => '<div class="box sec" data-attsec="' + k + '"><div class="mrow"><b>' + (title || 'پیوست تصاویر') + '</b><small class="mut">حداکثر ' + fa(IMGK) + ' تصویر</small></div>' + attHtml(k, ro) + (ro ? '' : '<div class="hint">رسید پرداخت، چک، سند یا هر مدرکی را از گالری یا دوربین اضافه کن تا در پرونده بماند.</div>') + '</div>';
+function attRedraw(k) { document.querySelectorAll('.atts[data-k="' + k + '"]').forEach(e => { const t = document.createElement('div'); t.innerHTML = attHtml(k, e.dataset.ro === '1'); e.replaceWith(t.firstChild); }); }
+let attCur = null, attIn = null;
+function attInput() { if (attIn) return attIn; attIn = document.createElement('input'); attIn.type = 'file'; attIn.accept = 'image/*'; attIn.multiple = true; attIn.hidden = true; document.body.appendChild(attIn);
+  attIn.addEventListener('change', async () => {
+    const k = attCur, fs = Array.from(attIn.files || []); attIn.value = ''; if (!k || !fs.length) return;
+    const ids = attGet(k), room = IMGK - ids.length; if (room <= 0) return toast('حداکثر ' + fa(IMGK) + ' تصویر.', 1);
+    let added = 0; for (const f of fs.slice(0, room)) { try { const data = await imgCompress(f), id = L.uid(); await imgPut(id, data, false); ids.push(id); added++; } catch (e) { toast('این تصویر خوانده نشد.', 1); } }
+    if (fs.length > room) toast('فقط ' + fa(IMGK) + ' تصویر مجاز است.', 1);
+    if (added) { if (attPersist(k)) save(); attRedraw(k); }
+  }); return attIn; }
+A['att-add'] = t => { attCur = t.dataset.k; const i = attInput(); i.value = ''; i.click(); };
+let attV = null;
+A['att-view'] = t => {
+  const k = t.dataset.k, id = t.dataset.id, ro = t.dataset.ro === '1'; attV = { k, id, ro };
+  const p = openPage({ title: 'تصویر پیوست', body: '<div class="attv"><img data-img="' + id + '" alt=""></div>', foot: '<button class="btn tap" data-a="att-share">' + ico('image', 18) + 'ارسال / ذخیره</button>' + (ro ? '' : '<button class="btn danger tap" data-a="att-del">حذف</button>') });
+  p.el._v = attV;
+};
+A['att-share'] = async t => { const v = t.closest('.page')._v, d = await imgGet(v.id); if (!d) return toast('تصویر هنوز آماده نیست.', 1); const b = await (await fetch(d)).blob(); shareFile(b, 'پیوست-' + v.id + '.jpg', 'پیوست'); };
+A['att-del'] = t => { const pg = t.closest('.page'), v = pg._v; ask('این تصویر از پرونده حذف شود؟', 'حذف', () => { const ids = attGet(v.k), i = ids.indexOf(v.id); if (i >= 0) ids.splice(i, 1); if (attPersist(v.k)) save(); attRedraw(v.k); pg.remove(); pages.splice(pages.indexOf(pg), 1); }, 1); };
+/* نمایش تصویرها: هر <img data-img> خودکار پر می‌شود */
+let hyT = 0;
+function hydrate() { hyT = 0; document.querySelectorAll('img[data-img]:not([data-h])').forEach(im => { im.dataset.h = 1; const id = im.dataset.img; imgGet(id).then(d => { if (d) im.src = d; else { im.dataset.h = ''; syFetchImg(id).then(x => { if (x) { im.src = x; im.dataset.h = 1; } }); } }); }); }
+new MutationObserver(() => { if (!hyT) hyT = requestAnimationFrame(hydrate); }).observe(document.body, { childList: true, subtree: true });
+function attRefs() { const s = new Set(); S.docs.forEach(d => (d.att || []).forEach(i => s.add(i))); (S.cheques || []).forEach(c => (c.att || []).forEach(i => s.add(i))); return s; }
+function partyAtts(pid) { const o = []; S.docs.filter(d => d.partyId === pid).sort((a, b) => b.ts - a.ts).forEach(d => (d.att || []).forEach(id => o.push({ id, k: 'doc:' + d.id, l: DT[d.type][0] + (d.no ? ' ' + fa(d.no) : '') + ' • ' + fdate(d.ts) }))); (S.cheques || []).filter(c => c.partyId === pid).forEach(c => (c.att || []).forEach(id => o.push({ id, k: 'chk:' + c.id, l: 'چک ' + fa(c.no || '') + ' • ' + fdate(c.due) }))); return o; }
+function partyGallery(pid) { const a = partyAtts(pid); if (!a.length) return ''; return '<div class="box sec"><div class="mrow"><b>پرونده و مدارک</b><small class="mut">' + fa(a.length) + ' تصویر</small></div><div class="atts">' + a.map(x => '<button type="button" class="att tap" data-a="att-view" data-k="' + x.k + '" data-id="' + x.id + '" data-ro="1" title="' + esc(x.l) + '"><img data-img="' + x.id + '" alt=""></button>').join('') + '</div></div>'; }
+/* پاکسازی تصاویر بی‌صاحب محلی (بیش از یک روز) */
+function imgGC() { idb().then(db => { const refs = attRefs(), t = db.transaction('imgs', 'readwrite'), st = t.objectStore('imgs'), rq = st.openCursor(); rq.onsuccess = () => { const c = rq.result; if (!c) return; const v = c.value; if (!refs.has(v.id) && Date.now() - (v.ts || 0) > 864e5) c.delete(); c.continue(); }; }).catch(() => {}); }
+
+/* ================= چک‌ها ================= */
+const CHST = { open: 'در جریان', cleared: 'وصول‌شده', bounced: 'برگشتی' };
+const dayDiff = ts => Math.round((L.dayStart(ts) - L.dayStart(Date.now())) / 864e5);
+const dueText = n => n === 0 ? 'امروز' : n > 0 ? fa(n) + ' روز دیگر' : fa(-n) + ' روز گذشته';
+const dueCls = (st, n) => st !== 'open' ? '' : n < 0 ? 'neg' : n <= 3 ? 'amber' : '';
+const ck = { dir: 'in', st: 'open' };
+chipH.cdir = v => { ck.dir = v; ckDraw(); }; chipH.cst = v => { ck.st = v; ckDraw(); };
+function openCheques() { ck.page = openPage({ title: 'چک‌ها', body: '', foot: '<button class="btn tap" data-a="chq-new">' + ico('plus', 18) + 'ثبت چک جدید</button><button class="btn ghost tap" data-a="chq-rep">' + ico('file', 18) + 'گزارش</button>' }); ck.page.el._redraw = ckDraw; ckDraw(); }
+function ckDraw() {
+  if (!ck.page || !ck.page.el.isConnected) return;
+  const all = (S.cheques || []).filter(c => c.ledgerId === S.activeLedger || !c.ledgerId), list = all.filter(c => c.dir === ck.dir && c.status === ck.st).sort((a, b) => ck.st === 'open' ? a.due - b.due : b.due - a.due);
+  const tot = list.reduce((s, c) => s + c.amount, 0);
+  const rows = list.map(c => { const n = dayDiff(c.due), p = party(c.partyId) || {}; return rowH({ a: 'chq', id: c.id, title: p.name || '', sub: (c.no ? 'شماره ' + fa(c.no) + ' • ' : '') + (c.bank ? c.bank + ' • ' : '') + fdate(c.due) + (c.status === 'open' ? ' (' + dueText(n) + ')' : ''), icon: 'bank', av: c.status === 'open' ? (n < 0 ? 'red' : n <= 3 ? 'amber' : '') : c.status === 'cleared' ? 'green' : 'red', end: endH(mu(c.amount), CHST[c.status], dueCls(c.status, n)) }); }).join('');
+  ck.page.body.innerHTML = '<div class="f" style="margin-top:12px"><label>نوع</label><div style="padding-top:8px">' + chipsH('cdir', [['in', 'دریافتی'], ['out', 'پرداختی']], ck.dir) + '</div></div><div class="f"><label>وضعیت</label><div style="padding-top:8px">' + chipsH('cst', [['open', 'در جریان'], ['cleared', 'وصول‌شده'], ['bounced', 'برگشتی']], ck.st) + '</div></div>' +
+    '<div class="box" style="margin-top:8px"><div class="mrow"><b>' + fa(list.length) + ' چک</b><b>' + mu(tot) + '</b></div></div>' + (rows ? '<div class="list" style="margin-top:8px">' + rows + '</div>' : empty('چکی نیست', 'با دکمهٔ «ثبت چک جدید» اضافه کن.')) + '<div class="hint">تا وقتی چک وصول نشده، مانده حساب و موجودی بانک تغییری نمی‌کند. با «وصول شد» سند دریافت یا پرداخت خودکار ثبت می‌شود.</div>';
+}
+A['go-cheques'] = () => openCheques();
+A['chq-rep'] = () => openReport('chq', { ledgerId: S.activeLedger });
+A['chq-new'] = () => chequeSheet(null);
+let cqf = null;
+chipH.cqd = v => { cqf.dir = v; };
+function chequeSheet(id, partyId) {
+  const c = id ? (S.cheques || []).find(x => x.id === id) : null;
+  cqf = { id, dir: c ? c.dir : 'in', partyId: c ? c.partyId : (partyId || ''), due: c ? c.due : Date.now() + 7 * 864e5 }; ATT.chq = c ? (c.att || []).slice() : [];
+  const w = openSheet('<h3 class="st">' + (c ? 'ویرایش چک' : 'چک جدید') + '</h3><div class="f"><label>نوع چک</label><div style="padding-top:8px">' + chipsH('cqd', [['in', 'دریافتی (از مشتری)'], ['out', 'پرداختی (به تأمین‌کننده)']], cqf.dir) + '</div></div>' +
+    '<div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="cq-party"><span id="cqp">' + (cqf.partyId ? esc((party(cqf.partyId) || {}).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
+    field('مبلغ (' + cur() + ') *', 'cqa', c ? fa(grp(c.amount)) : '', { money: 1 }) + field('شماره چک', 'cqn', c ? c.no : '', { num: 1 }) + field('بانک', 'cqb', c ? c.bank : '') +
+    '<div class="f"><label>تاریخ سررسید *</label><button class="pick tap" data-a="cq-due"><span id="cqd">' + fdate(cqf.due) + '</span>' + ico('calendar', 18) + '</button></div>' + field('توضیحات', 'cqt', c ? c.note : '') + attSec('chq') +
+    '<div class="pr"><button class="btn tap" data-a="cq-save">ثبت</button></div>');
+  w._id = id;
+}
+A['cq-party'] = () => pickParty(p => { cqf.partyId = p.id; $('#cqp').textContent = p.name; });
+A['cq-due'] = () => pickDate(cqf.due, ts => { cqf.due = L.dayStart(ts) + 12 * 36e5; $('#cqd').textContent = fdate(cqf.due); });
+A['cq-save'] = t => {
+  const w = t.closest('.sw');
+  const r = L.addCheque(S, { ledgerId: S.activeLedger, partyId: cqf.partyId, dir: cqf.dir, amount: num($('#cqa', w).value), no: fa(en($('#cqn', w).value.trim())), bank: $('#cqb', w).value.trim(), due: cqf.due, note: $('#cqt', w).value.trim(), att: ATT.chq.slice() }, w._id);
+  if (done(r, 'چک ثبت شد')) { closeSheet(w); render(); }
+};
+function openCheque(id) {
+  const draw = p => {
+    const c = (S.cheques || []).find(x => x.id === id); if (!c) return p.close();
+    const pt = party(c.partyId) || {}, n = dayDiff(c.due);
+    p.el.querySelector('h2').textContent = 'چک ' + (c.dir === 'in' ? 'دریافتی' : 'پرداختی');
+    p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mrow"><b>' + esc(pt.name || '') + '</b><span class="pill ' + (c.status === 'cleared' ? 'green' : c.status === 'bounced' ? 'red' : '') + '">' + CHST[c.status] + '</span></div><div style="font-size:22px;font-weight:700;margin-top:6px">' + mu(c.amount) + '</div>' +
+      '<div class="lines" style="margin-top:8px"><div class="line"><span>سررسید</span><b class="' + dueCls(c.status, n) + '">' + fdate(c.due) + (c.status === 'open' ? ' (' + dueText(n) + ')' : '') + '</b></div>' + (c.no ? '<div class="line"><span>شماره چک</span><b>' + fa(c.no) + '</b></div>' : '') + (c.bank ? '<div class="line"><span>بانک</span><b>' + esc(c.bank) + '</b></div>' : '') +
+      (c.status === 'cleared' ? '<div class="line"><span>وصول در</span><b>' + fdate(c.clearTs) + ' • ' + esc((acct(c.accountId) || {}).name || '') + '</b></div>' : '') + (c.note ? '<div class="line"><span>توضیحات</span><b>' + esc(c.note) + '</b></div>' : '') + '</div></div>' + attSec('chk:' + id);
+    const f = p.el.querySelector('.pfoot');
+    f.innerHTML = c.status === 'open' ? '<button class="btn tap" data-a="chq-clear">' + (c.dir === 'in' ? 'وصول شد' : 'پاس شد') + '</button><button class="btn ghost tap" data-a="chq-edit">ویرایش</button><button class="btn danger tap" data-a="chq-bounce">برگشت خورد</button>' :
+      c.status === 'bounced' ? '<button class="btn tap" data-a="chq-reopen">بازگرداندن به حالت باز</button><button class="btn danger tap" data-a="chq-del">حذف</button>' :
+      '<button class="btn danger tap" data-a="chq-reopen">برگرداندن وصول</button>';
+  };
+  const p = openPage({ title: '', body: '', foot: ' ' }); p.el._redraw = () => draw(p); p.el._id = id; draw(p);
+}
+A.chq = t => openCheque(t.dataset.id);
+A['chq-edit'] = t => chequeSheet(t.closest('.page')._id);
+A['chq-bounce'] = t => { const id = t.closest('.page')._id; ask('این چک برگشت خورده ثبت شود؟', 'ثبت برگشت', () => { if (done(L.bounceCheque(S, id), 'ثبت شد')) render(); }, 1); };
+A['chq-reopen'] = t => { const id = t.closest('.page')._id; ask('چک به حالت «در جریان» برگردد؟ اگر وصول شده، سند آن حذف می‌شود.', 'بازگرداندن', () => { snapBefore('قبل از برگرداندن وصول چک'); if (done(L.reopenCheque(S, id), 'برگشت')) render(); }, 1); };
+A['chq-del'] = t => { const pg = t.closest('.page'), id = pg._id; ask('این چک حذف شود؟', 'حذف', () => { snapBefore('قبل از حذف چک'); if (done(L.deleteCheque(S, id), 'حذف شد')) { pg.remove(); pages.splice(pages.indexOf(pg), 1); render(); } }, 1); };
+A['chq-clear'] = t => {
+  const id = t.closest('.page')._id, c = S.cheques.find(x => x.id === id); cf = { ts: Date.now() };
+  const w = openSheet('<h3 class="st">' + (c.dir === 'in' ? 'وصول چک' : 'پاس شدن چک') + '</h3><div class="hint">' + (c.dir === 'in' ? 'مبلغ به حساب انتخابی اضافه و از بدهی مشتری کم می‌شود.' : 'مبلغ از حساب انتخابی کم و از بدهی شما به تأمین‌کننده کم می‌شود.') + '</div>' + select('حساب', 'cqac', accOpts(), defAcct('bank')) + dtCells(cf.ts) + '<div class="pr"><button class="btn tap" data-a="chq-clear-ok">ثبت</button></div>');
+  w._id = id;
+};
+A['chq-clear-ok'] = t => { const w = t.closest('.sw'); const r = L.clearCheque(S, w._id, { accountId: $('#cqac', w).value, ts: cf.ts }); if (done(r, 'ثبت شد')) { closeSheet(w); render(); } };
+
+/* ================= یادآوری‌ها ================= */
+function remBanner() {
+  const r = L.reminders(S, Date.now(), S.activeLedger); if (!r.count) return '';
+  const over = r.cheques.filter(x => x.days < 0).length + r.debts.filter(x => x.days < 0).length;
+  return '<button class="remb tap' + (over ? ' over' : '') + '" data-a="go-rem">' + ico('calendar', 20) + '<span><b>' + fa(r.count) + ' یادآوری</b><small>' + [r.cheques.length ? fa(r.cheques.length) + ' چک' : '', r.debts.length ? fa(r.debts.length) + ' سررسید نسیه' : '', r.low.length ? fa(r.low.length) + ' کالای کم‌موجود' : ''].filter(Boolean).join(' • ') + (over ? ' • ' + fa(over) + ' عقب‌افتاده' : '') + '</small></span>' + ico('left', 18) + '</button>';
+}
+const remSub = () => { const r = L.reminders(S, Date.now()); return r.count ? fa(r.count) + ' مورد نیازمند توجه' : 'چک، سررسید نسیه و کمبود کالا'; };
+function openRem() {
+  const draw = p => {
+    const r = L.reminders(S, Date.now(), S.activeLedger); let h = '';
+    if (r.cheques.length) h += '<div class="sec"><h3>چک‌های نزدیک سررسید</h3><div class="list">' + r.cheques.map(x => rowH({ a: 'chq', id: x.c.id, title: (party(x.c.partyId) || {}).name || '', sub: (x.c.dir === 'in' ? 'چک دریافتی' : 'چک پرداختی') + ' • ' + dueText(x.days), icon: 'bank', av: x.days < 0 ? 'red' : 'amber', end: endH(mu(x.c.amount), '', dueCls('open', x.days)) })).join('') + '</div></div>';
+    if (r.debts.length) h += '<div class="sec"><h3>سررسید فاکتورهای نسیه</h3><div class="list">' + r.debts.map(x => rowH({ a: 'party', id: x.party.id, title: x.party.name, sub: (x.dir > 0 ? 'باید از او بگیرم' : 'باید به او بپردازم') + ' • ' + dueText(x.days), icon: x.dir > 0 ? 'inn' : 'out', av: x.days < 0 ? 'red' : 'amber', end: endH(mu(x.amount), '', dueCls('open', x.days)) })).join('') + '</div></div>';
+    if (r.low.length) h += '<div class="sec"><h3>کالاهای کم‌موجود</h3><div class="list">' + r.low.map(pp => rowH({ a: 'prod', id: pp.id, title: pp.name, sub: 'حداقل: ' + qf(pp.min) + ' ' + pp.unit, icon: 'box', av: 'amber', end: endH(qf(L.stockOf(S, pp.id)) + ' ' + pp.unit, '', 'neg') })).join('') + '</div></div>';
+    p.body.innerHTML = h || empty('همه چیز مرتب است', 'چک، سررسید نسیه یا کمبود کالایی نیست.');
+  };
+  const p = openPage({ title: 'یادآوری‌ها', body: '' }); p.el._redraw = () => draw(p); draw(p);
+}
+A['go-rem'] = () => openRem();
+
+/* ================= انبارگردانی ================= */
+function openStocktake() {
+  const ps = S.products.slice().sort((a, b) => cmpFa(a.name, b.name));
+  const p = openPage({ title: 'انبارگردانی', body: '<div class="hint" style="margin-top:12px">موجودی واقعی هر کالا را بشمار و بنویس. فقط ردیف‌های پرشده و متفاوت ثبت می‌شوند. کسری با قیمت تمام‌شده از سود کم و اضافی به قیمت آخرین خرید به انبار اضافه می‌شود.</div>' +
+    '<div class="list" style="margin-top:8px">' + (ps.map(pr => { const st = L.stockOf(S, pr.id); return '<div class="row"><span class="tx"><b>' + esc(pr.name) + '</b><small>در دفتر: ' + qf(st) + ' ' + esc(pr.unit) + '</small></span><span class="end"><input class="stin" inputmode="decimal" data-in="stc" data-id="' + pr.id + '" data-sys="' + st + '" placeholder="شمارش" autocomplete="off"><small class="stdf" id="sdf_' + pr.id + '"></small></span></div>'; }).join('') || empty('محصولی نیست')) + '</div>', foot: '<button class="btn tap" data-a="st-save">ثبت اصلاح‌ها</button>' });
+}
+I.stc = t => { const v = t.value.trim(), e = document.getElementById('sdf_' + t.dataset.id); if (!e) return; if (!v) { e.textContent = ''; return; } const d = num(v) - +t.dataset.sys; e.textContent = Math.abs(d) < 1e-9 ? 'بدون اختلاف' : (d > 0 ? '+' : '−') + qf(Math.abs(d)); e.className = d < 0 ? 'neg' : d > 0 ? 'pos' : ''; };
+A['go-stocktake'] = () => openStocktake();
+A['st-save'] = t => {
+  const pg = t.closest('.page'), items = []; pg.querySelectorAll('.stin').forEach(i => { if (i.value.trim()) items.push({ pid: i.dataset.id, counted: num(i.value) }); });
+  if (!items.length) return toast('تعداد شمارش‌شده را وارد کن.', 1);
+  ask('اصلاح موجودی ثبت شود؟ این کار موجودی دفتر را برابر شمارش شما می‌کند.', 'ثبت', () => { snapBefore('قبل از انبارگردانی'); const r = L.addStocktake(S, { ledgerId: S.activeLedger, ts: Date.now(), items }); if (done(r, 'ثبت شد')) { pg.remove(); pages.splice(pages.indexOf(pg), 1); render(); } });
+};
+const adjHtml = d => '<div class="box sec"><div class="mrow"><b>' + (d.loss > 0 ? 'کسری انبار' : d.loss < 0 ? 'اضافی انبار' : 'اصلاح موجودی') + '</b><b class="' + (d.loss > 0 ? 'neg' : 'pos') + '">' + mu(Math.abs(d.loss)) + '</b></div><div class="list" style="margin-top:8px">' + d.items.map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span class="' + (i.diff < 0 ? 'neg' : 'pos') + '">' + (i.diff > 0 ? '+' : '−') + qf(Math.abs(i.diff)) + '</span></div><div class="b2"><span>دفتر: ' + qf(i.sys) + ' → شمارش: ' + qf(i.counted) + '</span><span>' + mu(Math.abs(i.value)) + '</span></div></div>').join('') + '</div></div>';
+
+/* ================= قفل برنامه ================= */
+const LKK = 'hesab-lock';
+const lockCfg = () => { try { return JSON.parse(localStorage.getItem(LKK)); } catch (e) { return null; } };
+async function pinHash(pin, salt) { try { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + pin)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); } catch (e) { let h = 5381; const s = salt + ':' + pin; for (let r = 0; r < 3000; r++) for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i) + r) | 0; return 'f' + h; } }
+const lockSub = () => lockCfg() ? 'روشن' : 'رمز عددی برای ورود به برنامه';
+let lk = { buf: '', fails: 0, until: 0, hiddenAt: 0 };
+function lockShow() {
+  const c = lockCfg(); if (!c || document.getElementById('lockov')) return;
+  const o = document.createElement('div'); o.id = 'lockov'; o.className = 'lockov';
+  o.innerHTML = '<div class="lkbox"><span class="blogo lklogo" aria-hidden="true"></span><h2>دفتر فروش</h2><div class="lkd" id="lkd"></div><div class="lkm" id="lkm">رمز را وارد کن</div><div class="lkp">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : '<button class="lkk tap" data-a="lk-k" data-v="' + k + '">' + fa(k) + '</button>').join('') + '</div></div>';
+  document.body.appendChild(o); lk.buf = ''; lkDots();
+}
+const lkDots = () => { const c = lockCfg(), n = c ? c.len : 4, e = document.getElementById('lkd'); if (e) e.innerHTML = Array.from({ length: n }, (_, i) => '<i class="' + (i < lk.buf.length ? 'on' : '') + '"></i>').join(''); };
+A['lk-k'] = async t => {
+  const c = lockCfg(); if (!c) return; const m = document.getElementById('lkm');
+  if (Date.now() < lk.until) { m.textContent = 'کمی صبر کن و دوباره امتحان کن'; return; }
+  const v = t.dataset.v; if (v === '⌫') lk.buf = lk.buf.slice(0, -1); else if (lk.buf.length < c.len) lk.buf += v;
+  lkDots(); if (lk.buf.length < c.len) return;
+  if (await pinHash(lk.buf, c.salt) === c.h) { lk.fails = 0; document.getElementById('lockov').remove(); }
+  else { lk.fails++; lk.buf = ''; lkDots(); m.textContent = 'رمز اشتباه است'; m.className = 'lkm bad'; if (lk.fails >= 5) { lk.until = Date.now() + 30000; lk.fails = 0; m.textContent = 'چند بار اشتباه شد؛ ۳۰ ثانیه صبر کن'; } }
+};
+document.addEventListener('visibilitychange', () => { const c = lockCfg(); if (!c) return; if (document.hidden) lk.hiddenAt = Date.now(); else if (lk.hiddenAt && Date.now() - lk.hiddenAt >= (c.delay || 0) * 1000) lockShow(); });
+function openLock() {
+  const warn = '<div class="warn-note" style="margin-top:12px">اگر رمز را فراموش کنی راه بازگشتی نیست: باید برنامه را حذف و دوباره نصب کنی و اطلاعات را از «همگام‌سازی ابری» برگردانی. پس همگام‌سازی ابری را روشن نگه دار.</div>';
+  const p = openPage({ title: 'قفل برنامه', body: '' });
+  const draw = () => { const c = lockCfg(); p.body.innerHTML = c ? '<div class="ok-note" style="margin-top:12px">قفل روشن است.</div><div class="f"><label>قفل شدن بعد از خروج از برنامه</label><div style="padding-top:8px">' + chipsH('lkd', [['0', 'بلافاصله'], ['60', '۱ دقیقه'], ['300', '۵ دقیقه']], String(c.delay || 0)) + '</div></div><button class="btn ghost tap" data-a="lk-change" style="margin-top:12px">تغییر رمز</button><button class="btn danger tap" data-a="lk-off" style="margin-top:8px">خاموش کردن قفل</button>' + warn :
+    '<div class="hint" style="margin-top:12px">با روشن کردن قفل، هر بار برنامه را باز کنی رمز می‌خواهد. رمز فقط روی همین دستگاه می‌ماند.</div><div class="f"><label for="lkp1">رمز جدید (۴ تا ۶ رقم)</label><input id="lkp1" inputmode="numeric" type="password" maxlength="6" autocomplete="off" style="direction:ltr;text-align:left"></div><div class="f"><label for="lkp2">تکرار رمز</label><input id="lkp2" inputmode="numeric" type="password" maxlength="6" autocomplete="off" style="direction:ltr;text-align:left"></div><button class="btn tap" data-a="lk-save">روشن کردن قفل</button>' + warn; };
+  p.el._lk = draw; draw();
+}
+chipH.lkd = v => { const c = lockCfg(); if (!c) return; c.delay = +v; localStorage.setItem(LKK, JSON.stringify(c)); };
+A['go-lock'] = () => openLock();
+A['lk-save'] = async t => {
+  const pg = t.closest('.page'), a = en($('#lkp1', pg).value), b = en($('#lkp2', pg).value);
+  if (!/^\d{4,6}$/.test(a)) return toast('رمز باید ۴ تا ۶ رقم باشد.', 1); if (a !== b) return toast('دو رمز یکسان نیستند.', 1);
+  const salt = L.uid(); localStorage.setItem(LKK, JSON.stringify({ salt, h: await pinHash(a, salt), len: a.length, delay: 0 })); toast('قفل روشن شد'); pg._lk();
+};
+A['lk-change'] = t => { const pg = t.closest('.page'); localStorage.removeItem(LKK); pg._lk(); };
+A['lk-off'] = t => { const pg = t.closest('.page'); ask('قفل برنامه خاموش شود؟', 'خاموش', () => { localStorage.removeItem(LKK); pg._lk(); }, 1); };
+
+/* ================= نقاط بازگشت ================= */
+let _sdb = null;
+const sdb = () => _sdb || (_sdb = new Promise((res, rej) => { try { const r = indexedDB.open('hesab-snap', 1); r.onupgradeneeded = () => r.result.createObjectStore('snaps', { keyPath: 'id' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }));
+const sop = (mode, fn) => sdb().then(db => new Promise((res, rej) => { const t = db.transaction('snaps', mode), rq = fn(t.objectStore('snaps')); t.oncomplete = () => res(rq && rq.result); t.onerror = () => rej(t.error); }));
+function snapBefore(label, auto) {
+  let js; try { js = JSON.stringify(S); } catch (e) { return Promise.resolve(); }
+  const rec = { id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 5), ts: Date.now(), label, auto: !!auto, json: js, docs: S.docs.length, parties: S.parties.length };
+  return sop('readwrite', st => st.put(rec)).then(() => snapPrune()).catch(() => {});
+}
+function snapPrune() { return sop('readonly', st => st.getAll()).then(all => { all = (all || []).sort((a, b) => b.ts - a.ts); const keep = new Set(), man = all.filter(x => !x.auto), aut = all.filter(x => x.auto); man.slice(0, 30).forEach(x => keep.add(x.id)); aut.slice(0, 14).forEach(x => keep.add(x.id)); const del = all.filter(x => !keep.has(x.id)); if (!del.length) return; return sop('readwrite', st => { del.forEach(x => st.delete(x.id)); }); }).catch(() => {}); }
+function snapDaily() { if (L.isEmptyState(S)) return; sop('readonly', st => st.getAll()).then(all => { const last = (all || []).filter(x => x.auto).sort((a, b) => b.ts - a.ts)[0]; if (!last || Date.now() - last.ts > 20 * 36e5) snapBefore('پشتیبان خودکار روزانه', true); }).catch(() => {}); }
+function openSnaps() {
+  const p = openPage({ title: 'نقاط بازگشت', body: '<div class="hint" style="margin-top:12px">برنامه قبل از هر حذف مهم و هر روز یک نسخه از اطلاعات را روی همین دستگاه نگه می‌دارد. اگر چیزی را اشتباهی حذف کردی، اینجا به قبل از آن برگرد. توجه: بازگردانی کل اطلاعات را به همان لحظه برمی‌گرداند و تغییرهای بعدش از بین می‌رود (قبل از بازگردانی هم یک نسخه از وضعیت فعلی ذخیره می‌شود).</div><div id="snl"></div>' });
+  sop('readonly', st => st.getAll()).then(all => { const l = $('#snl', p.el); if (!l) return; all = (all || []).sort((a, b) => b.ts - a.ts); l.innerHTML = all.length ? '<div class="list" style="margin-top:8px">' + all.map(x => '<div class="row"><span class="tx"><b>' + esc(x.label) + '</b><small>' + fdate(x.ts) + ' ' + ftime(x.ts) + ' • ' + fa(x.docs) + ' سند • ' + fa(x.parties) + ' طرف‌حساب</small></span><span class="end"><button class="chip tap" data-a="sn-rest" data-id="' + x.id + '">بازگردانی</button></span></div>').join('') + '</div>' : empty('هنوز نقطه‌ای نیست'); }).catch(() => { const l = $('#snl', p.el); if (l) l.innerHTML = empty('ذخیره‌سازی در این مرورگر ممکن نیست'); });
+}
+A['go-snaps'] = () => openSnaps();
+A['sn-rest'] = t => { const id = t.dataset.id; ask('اطلاعات برنامه به این نقطه برگردد؟ تغییرهای بعد از آن از بین می‌رود (یک نسخه از وضعیت فعلی هم نگه داشته می‌شود).', 'بازگردانی', async () => { try { const rec = await sop('readonly', st => st.get(id)); if (!rec) return toast('پیدا نشد.', 1); await snapBefore('قبل از بازگردانی نقطه'); const o = JSON.parse(rec.json); if (!o || !o.v) throw new Error('bad'); sync.halt = true; localStorage.setItem(KEY, rec.json); sy.dirty = true; sySave(); toast('بازگردانی شد'); setTimeout(() => location.reload(), 500); } catch (e) { sync.halt = false; toast('بازگردانی ممکن نشد.', 1); } }, 1); };
+
+/* ================= بارکد ================= */
+let bcS = null;
+function stopScan() { if (bcS) { bcS.on = false; try { bcS.stream.getTracks().forEach(t => t.stop()); } catch (e) {} bcS = null; } }
+async function scanBarcode(cb) {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('این دستگاه دوربین را در مرورگر نمی‌دهد. بارکد را تایپ کن.', 1);
+  let det = null;
+  if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch (e) { det = null; } }
+  if (!det) {
+    try { await new Promise((res, rej) => { if (window.ZXing) return res(); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); } catch (e) { return toast('اسکن با دوربین در این دستگاه ممکن نشد. بارکد را تایپ کن یا با اسکنر وارد کن.', 1); }
+  }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } catch (e) { return toast('اجازهٔ دوربین داده نشد.', 1); }
+  const w = openSheet('<h3 class="st">بارکد را جلوی دوربین بگیر</h3><video id="bcv" class="bcv" playsinline muted></video><div class="pr"><button class="btn ghost tap" data-a="bc-close">بستن</button></div>');
+  const v = $('#bcv', w); v.srcObject = stream; try { await v.play(); } catch (e) {}
+  bcS = { stream, on: true, w }; const fin = txt => { if (!bcS || !bcS.on) return; stopScan(); closeSheet(w); cb(txt); };
+  if (det) { const tick = async () => { if (!bcS || !bcS.on) return; try { const r = await det.detect(v); if (r && r[0]) return fin(r[0].rawValue); } catch (e) {} setTimeout(tick, 250); }; tick(); }
+  else { const tick = async () => { if (!bcS || !bcS.on) return; try { const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; if (c.width) { c.getContext('2d').drawImage(v, 0, 0); const lum = new ZXing.HTMLCanvasElementLuminanceSource(c), bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)); const r = new ZXing.MultiFormatReader().decode(bmp); if (r) return fin(r.getText()); } } catch (e) {} setTimeout(tick, 300); }; tick(); }
+}
+A['bc-close'] = t => { stopScan(); closeSheet(t.closest('.sw')); };
+A['g-scan'] = t => scanBarcode(txt => { const e = $('#gbc'); if (e) e.value = fa(en(txt)); });
+function pickProduct(cb, kind) {
+  const w = openSheet('<h3 class="st">انتخاب محصول</h3><div class="srow" style="margin:0 0 8px"><div class="search">' + ico('search', 20) + '<input id="gq" data-in="gq" placeholder="نام یا بارکد" autocomplete="off"></div><button class="sbtn tap" data-a="gp-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div><div class="list" id="gl"></div><div class="pr"><button class="btn ghost tap" data-a="gp-new">محصول جدید</button></div>');
+  w._cb = cb; w._kind = kind; gpDraw(w, '');
+}
+function gpDraw(w, q) {
+  const kind = w._kind, qq = en(q || '').trim();
+  const ps = S.products.filter(p => !qq || (p.name + ' ' + (p.cat || '')).includes(q.trim()) || (p.barcode && en(p.barcode).includes(qq)));
+  $('#gl', w).innerHTML = ps.map(p => { const st = L.stockOf(S, p.id); return rowH({ a: 'gp-pick', id: p.id, title: p.name, sub: p.barcode ? 'بارکد ' + p.barcode : '', icon: 'box', av: kind === 'sale' && st <= 0 ? 'red' : '', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', '', st > 0 ? '' : 'neg') }); }).join('') || '<div class="hint" style="text-align:center">' + (S.products.length ? 'محصولی پیدا نشد.' : 'هنوز محصولی تعریف نشده.') + '</div>';
+}
+I.gq = t => { const w = t.closest('.sw'); gpDraw(w, t.value); const qq = en(t.value).trim(); if (qq.length >= 6) { const m = S.products.filter(p => p.barcode && en(p.barcode) === qq); if (m.length === 1) { const cb = w._cb; closeSheet(w); cb(m[0]); } } };
+A['gp-scan'] = t => { const w = t.closest('.sw'); scanBarcode(txt => { const e = $('#gq', w); if (e) { e.value = fa(en(txt)); I.gq(e); } }); };
+
+/* ================= ارسال صورت‌حساب ================= */
+A['pp-send'] = t => {
+  const id = t.closest('.page')._id, txt = L.statementText(S, id), p = party(id);
+  if (navigator.share) { navigator.share({ text: txt, title: 'صورت‌حساب ' + p.name }).catch(() => {}); return; }
+  const m = en(p.mobile || '').replace(/\D/g, ''); if (m) { window.open('https://wa.me/' + (m.startsWith('0') ? '98' + m.slice(1) : m) + '?text=' + encodeURIComponent(txt), '_blank'); return; }
+  try { navigator.clipboard.writeText(txt); toast('متن صورت‌حساب کپی شد'); } catch (e) { toast('ارسال ممکن نشد.', 1); }
+};
+A['go-cheques-party'] = () => {};
+
+/* ================= راه‌اندازی بخش‌ها ================= */
+lockShow(); snapDaily(); setTimeout(imgGC, 5000);
 
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
 Object.assign(IC, {
@@ -2500,7 +2917,7 @@ function invShow(pg) {
 function openInvoiceView(id) {
   const d = S.docs.find(x => x.id === id), canOff = d && (d.type === 'sale' || d.type === 'buy');
   const p = openPage({ title: 'فاکتور', body: (canOff ? '<div class="chips ivc" style="padding:12px 16px 0"><button class="chip tap ivm on" data-a="iv-mode" data-m="inf">فاکتور غیررسمی</button><button class="chip tap ivm" data-a="iv-mode" data-m="off">فاکتور رسمی (A4 افقی)</button></div>' : '') + '<div class="invv" id="invv"></div>',
-    foot: '<button class="btn tap" data-a="iv-print">' + ico('print', 18) + 'چاپ / PDF</button><button class="btn ghost tap" data-a="iv-img">' + ico('image', 18) + 'ذخیره تصویر</button>' });
+    foot: '<button class="btn tap" data-a="iv-print">' + ico('print', 18) + 'چاپ / PDF</button><button class="btn ghost tap" data-a="iv-img">' + ico('image', 18) + 'ارسال / ذخیره تصویر</button>' });
   p.el._id = id; p.el._mode = 'inf'; invShow(p.el);
 }
 A['iv-mode'] = t => { const pg = t.closest('.page'); pg._mode = t.dataset.m; invShow(pg); };
@@ -2539,7 +2956,7 @@ const rv = { kind: '', o: {}, f: 'all', m: null, page: null };
 function rvRange() { const now = Date.now(); if (rv.f === 'today') return { from: L.dayStart(now) }; if (rv.f === 'month') return { from: L.monthStart(now) }; if (rv.f === 'd30') return { from: L.dayStart(now - 29 * 864e5) }; if (rv.f === 'custom' && ui.custom) return { from: ui.custom.from, to: ui.custom.to }; return {}; }
 function rvBuild() {
   const r = rvRange(), o = { ...rv.o, from: r.from, to: r.to };
-  const m = rv.kind === 'txns' ? L.repTxns(S, o) : rv.kind === 'party' ? L.repParty(S, o) : rv.kind === 'inv' ? L.repInventory(S, o) : rv.kind === 'parties' ? L.repParties(S, o) : L.repAccounts(S);
+  const m = rv.kind === 'txns' ? L.repTxns(S, o) : rv.kind === 'party' ? L.repParty(S, o) : rv.kind === 'inv' ? L.repInventory(S, o) : rv.kind === 'parties' ? L.repParties(S, o) : rv.kind === 'aging' ? L.repAging(S, o) : rv.kind === 'custp' ? L.repCustProfit(S, o) : rv.kind === 'chq' ? L.repCheques(S, o) : L.repAccounts(S);
   m.biz = [bizName(), prof().phone].filter(Boolean).join(' • '); return m;
 }
 const balStatus = b => Math.abs(b) < 1 ? 'تسویه' : b > 0 ? 'طلبکارم' : 'بدهکارم';
@@ -2565,7 +2982,7 @@ function printHead() { const P = prof(); return '<div class="phd"><span class="p
 chipH.rvf = v => { if (v === 'custom') { rng = ui.custom ? { ...ui.custom } : { from: L.dayStart(Date.now()), to: L.dayStart(Date.now()) + 86399999 }; rng.w = openSheet('<div id="rbox"></div>', () => drawRange()); rng.cb = () => { rv.f = 'custom'; rvDraw(); }; return; } rv.f = v; rvDraw(); };
 function rvDraw() {
   rv.m = rvBuild();
-  rv.page.body.innerHTML = '<div class="f" style="margin-top:12px"><label>بازه‌ی زمانی</label><div style="padding-top:8px">' + chipsH('rvf', [['all', 'همه'], ['today', 'امروز'], ['month', 'ماه جاری'], ['d30', '۳۰ روز اخیر'], ['custom', 'دلخواه']].filter(x => !(rv.kind === 'accts' || rv.kind === 'parties') || x[0] === 'all'), rv.f) + '</div></div>' + modelHtml(rv.m);
+  rv.page.body.innerHTML = '<div class="f" style="margin-top:12px"><label>بازه‌ی زمانی</label><div style="padding-top:8px">' + chipsH('rvf', [['all', 'همه'], ['today', 'امروز'], ['month', 'ماه جاری'], ['d30', '۳۰ روز اخیر'], ['custom', 'دلخواه']].filter(x => !(rv.kind === 'accts' || rv.kind === 'parties' || rv.kind === 'aging' || rv.kind === 'chq') || x[0] === 'all'), rv.f) + '</div></div>' + modelHtml(rv.m);
 }
 function openReport(kind, o) {
   rv.kind = kind; rv.o = o || {}; rv.f = 'all';
