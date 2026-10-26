@@ -1809,7 +1809,7 @@ function invBody() {
     '<div class="f" style="margin-top:6px"><label>شماره فاکتور</label><div class="pick" style="justify-content:center">' + fa(inv.no) + '</div></div></div>' +
     '<div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="inv-party"><span>' + (pt ? esc(pt.name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     (pt ? '<div class="hint ' + (balText(L.partyBal(S, pt.id)).c) + '">' + (Math.abs(L.partyBal(S, pt.id)) < 1 ? 'تسویه' : balText(L.partyBal(S, pt.id)).t + ': ' + balText(L.partyBal(S, pt.id)).amt) + '</div>' : '') +
-    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button><button class="btn ghost tap" data-a="inv-scan" style="margin-top:8px">' + ico('image', 20) + 'اسکن بارکد (افزودن خودکار به لیست)</button></div>' +
+    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><div class="srow" style="margin:8px 0 0"><div class="search">' + ico('search', 20) + '<input id="iqs" data-in="iqs" inputmode="search" placeholder="بارکد (مثلاً ۴ رقم آخر) یا نام محصول" autocomplete="off"></div></div><div class="list" id="iqr"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button><button class="btn ghost tap" data-a="inv-scan" style="margin-top:8px">' + ico('image', 20) + 'اسکن بارکد (افزودن خودکار به لیست)</button></div>' +
     '<div class="box sec" id="tot"></div>' +
     discBlock(d) +
     '<button class="chk tap" data-a="inv-tax" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="taxb">' + ico('check', 16) + '</span><span>مالیات بر ارزش افزوده (' + fa(S.settings.taxRate) + '٪)</span></button>' +
@@ -1875,18 +1875,30 @@ A['inv-save'] = () => {
 /* اقلام */
 let it = null; chipH.dummy = () => {};
 A['inv-add'] = () => itemSheet(-1);
+function invAddProd(p) {
+  const sale = inv.kind === 'sale', ex = inv.d.items.find(i => i.pid === p.id);
+  if (ex) ex.qty = (+ex.qty || 0) + 1;
+  else { const price = (sale ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id)) || 0; inv.d.items.push({ pid: p.id, qty: 1, price, partners: [] }); }
+  invUpd();
+  const q = (ex || inv.d.items[inv.d.items.length - 1]).qty, st = L.stockOf(S, p.id);
+  return '✓ ' + p.name + ' — تعداد: ' + fa(q) + (sale && q > st ? ' (موجودی کافی نیست!)' : '');
+}
+function invAskPrice() { const i = inv.d.items.findIndex(x => !(x.price > 0)); if (i >= 0) { toast('قیمت این محصول را وارد کن.'); itemSheet(i); } }
+I.iqs = t => {
+  const q = t.value.trim(), box = $('#iqr'); if (!box) return;
+  if (!q) { box.innerHTML = ''; return; }
+  const ps = S.products.filter(p => prodMatch(p, q)).slice(0, 8);
+  box.innerHTML = ps.map(p => { const st = L.stockOf(S, p.id); return rowH({ a: 'iq-pick', id: p.id, title: p.name, sub: p.barcode ? 'بارکد ' + p.barcode : '', icon: 'box', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', '', st > 0 ? '' : 'neg') }); }).join('') || '<div class="hint" style="text-align:center">محصولی پیدا نشد.</div>';
+  if (ps.length === 1 && en(q).length >= 4 && /^\d+$/.test(en(q))) { /* یک نتیجه: با Enter هم اضافه می‌شود */ }
+};
+A['iq-pick'] = t => { const p = prod(t.dataset.id); if (!p) return; const m = invAddProd(p); const e = $('#iqs'); if (e) { e.value = ''; $('#iqr').innerHTML = ''; } toast(m); invAskPrice(); };
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target && e.target.id === 'iqs') { e.preventDefault(); const f = document.querySelector('#iqr [data-a="iq-pick"]'); if (f) f.click(); } });
 A['inv-scan'] = () => {
-  const sale = inv.kind === 'sale';
   scanBarcode(txt => {
     const code = en(txt), p = S.products.find(x => x.barcode && en(x.barcode) === code);
     if (!p) return 'محصولی با بارکد ' + fa(code) + ' پیدا نشد (اول در محصول ثبتش کن)';
-    const ex = inv.d.items.find(i => i.pid === p.id);
-    if (ex) ex.qty = (+ex.qty || 0) + 1;
-    else { const price = (sale ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id)) || 0; inv.d.items.push({ pid: p.id, qty: 1, price, partners: [] }); }
-    invUpd();
-    const q = (ex || inv.d.items[inv.d.items.length - 1]).qty, st = L.stockOf(S, p.id);
-    return '✓ ' + p.name + ' — تعداد: ' + fa(q) + (sale && q > st ? ' (موجودی کافی نیست!)' : '');
-  }, { multi: true, onEnd: () => { const i = inv.d.items.findIndex(x => !(x.price > 0)); if (i >= 0) { toast('قیمت این محصول را وارد کن.'); itemSheet(i); } } });
+    return invAddProd(p);
+  }, { multi: true, onEnd: invAskPrice });
 };
 A['inv-edit'] = t => itemSheet(+t.dataset.i);
 function itemSheet(idx) {
