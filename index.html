@@ -290,6 +290,8 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 .lkk{height:62px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:24px}
 .bcv{width:100%;max-height:50vh;border-radius:14px;background:#000;object-fit:cover}
 
+.bcbox{position:relative}.bcl{position:absolute;left:8%;right:8%;top:50%;height:2px;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:bcl 1.6s ease-in-out infinite alternate;pointer-events:none}@keyframes bcl{from{top:35%}to{top:65%}}
+
 </style>
 <div id="app"><main id="main"></main><nav class="bar" id="nav" aria-label="بخش‌های اصلی"></nav></div><div id="pages"></div><div id="sheets"></div>
 <script>
@@ -1023,12 +1025,12 @@ function repInventory(S, o) {
   for (const p of prods) {
     const s = stat[p.id]; if (!(s.open || s.inQ || s.outQ || s.retQ)) continue;
     const fin = s.open + s.inQ - s.outQ, oV = R(s.open * lastCostAt(S, p.id, o.from == null ? -1 : o.from - 1)), fV = R(fin * lastCostAt(S, p.id, o.to));
-    rows.push([++n, p.name, p.cat || '', p.unit, s.open, oV, s.inQ, s.inV, s.outQ, s.outV, s.outC, s.outV - s.outC, s.retQ, fin, fV]);
+    rows.push([++n, p.name, p.cat || '', p.barcode || '', p.unit, s.open, oV, s.inQ, s.inV, s.outQ, s.outV, s.outC, s.outV - s.outC, s.retQ, fin, fV]);
     tones.push(fin <= 0 ? 'neg' : '');
     T.oV += oV; T.iV += s.inV; T.oV2 += s.outV; T.c += s.outC; T.p += s.outV - s.outC; T.fV += fV;
   }
-  const foot = ['', 'جمع', '', '', '', T.oV, '', T.iV, '', T.oV2, T.c, T.p, '', '', T.fV];
-  const sheet1 = { name: 'خلاصه انبار', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'محصول', t: 'text', w: 26 }, { h: 'دسته‌بندی', t: 'text', w: 14 }, { h: 'واحد', t: 'text', w: 9 }, { h: 'موجودی اولیه', t: 'num', w: 12 }, { h: 'ارزش اولیه', t: 'money', w: 16 }, { h: 'ورود (تعداد)', t: 'num', w: 12 }, { h: 'ورود (مبلغ)', t: 'money', w: 16 }, { h: 'خروج (تعداد)', t: 'num', w: 12 }, { h: 'خروج (مبلغ فروش)', t: 'money', w: 18 }, { h: 'بهای تمام‌شده خروج', t: 'money', w: 18 }, { h: 'سود', t: 'money', w: 16 }, { h: 'مرجوعی (تعداد)', t: 'num', w: 12 }, { h: 'موجودی نهایی', t: 'num', w: 12 }, { h: 'ارزش نهایی', t: 'money', w: 16 }], rows, tones, foot };
+  const foot = ['', 'جمع', '', '', '', '', T.oV, '', T.iV, '', T.oV2, T.c, T.p, '', '', T.fV];
+  const sheet1 = { name: 'خلاصه انبار', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'محصول', t: 'text', w: 26 }, { h: 'دسته‌بندی', t: 'text', w: 14 }, { h: 'بارکد', t: 'text', w: 16 }, { h: 'واحد', t: 'text', w: 9 }, { h: 'موجودی اولیه', t: 'num', w: 12 }, { h: 'ارزش اولیه', t: 'money', w: 16 }, { h: 'ورود (تعداد)', t: 'num', w: 12 }, { h: 'ورود (مبلغ)', t: 'money', w: 16 }, { h: 'خروج (تعداد)', t: 'num', w: 12 }, { h: 'خروج (مبلغ فروش)', t: 'money', w: 18 }, { h: 'بهای تمام‌شده خروج', t: 'money', w: 18 }, { h: 'سود', t: 'money', w: 16 }, { h: 'مرجوعی (تعداد)', t: 'num', w: 12 }, { h: 'موجودی نهایی', t: 'num', w: 12 }, { h: 'ارزش نهایی', t: 'money', w: 16 }], rows, tones, foot };
   moves.sort((a, b) => b.ts - a.ts || b.seq - a.seq);
   const sheet2 = { name: 'ریز خرید و فروش', cols: [{ h: 'تاریخ', t: 'text', w: 12 }, { h: 'نوع', t: 'text', w: 12 }, { h: 'شماره', t: 'text', w: 8 }, { h: 'محصول', t: 'text', w: 26 }, { h: 'طرف‌حساب', t: 'text', w: 22 }, { h: 'نقش', t: 'text', w: 12 }, { h: 'تعداد', t: 'num', w: 10 }, { h: 'واحد', t: 'text', w: 9 }, { h: 'قیمت واحد', t: 'money', w: 16 }, { h: 'جمع مبلغ', t: 'money', w: 18 }, { h: 'بهای تمام‌شده', t: 'money', w: 18 }, { h: 'سود', t: 'money', w: 16 }], rows: moves.map(m => m.row), tones: moves.map(m => m.tone) };
   const prs = Object.values(pair).sort((a, b) => pname(a.pid).localeCompare(pname(b.pid), 'fa') || b.amt - a.amt);
@@ -1054,7 +1056,7 @@ function repAccounts(S) {
     sheets: [{ name: 'حساب‌ها', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'حساب', t: 'text', w: 24 }, { h: 'نوع', t: 'text', w: 10 }, { h: 'موجودی اولیه', t: 'money', w: 18 }, { h: 'جمع ورودی', t: 'money', w: 18 }, { h: 'جمع خروجی', t: 'money', w: 18 }, { h: 'موجودی فعلی', t: 'money', w: 18 }], rows, tones: rows.map(r => r[6] < 0 ? 'neg' : '') }] };
 }
 
-const api = { addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
+const api = { decodeBarcode, barcodeRow, eanBits, eanCheck, addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
   addSale, addBuy, calcDisc, addSaleReturn, returnable, migrate, DEF_PCATS, invoiceData, partyBalBefore, repTxns, repParty, repInventory, repParties, repAccounts, lastCostAt, TYPE_FA, SIGN, PAY_FA, dateS, faS, mny, qtyS, rangeText, deleteDoc, addCashDoc, addMoney, addPartnerPay, addVisitorPay, addVisitorSalary, partyBal, accountBal, partnerBal, visitorBal, summary, partnerApplies };
 
 
@@ -1168,6 +1170,73 @@ function statementText(S, partyId, n) {
   const bt = Math.abs(b) < 1 ? 'تسویه' : (b > 0 ? 'بدهکار به ما: ' : 'طلبکار از ما: ') + mny(Math.abs(b)) + ' ' + cur;
   const lines = ds.map(d => dateS(d.ts) + ' — ' + TYPE_FA[d.type] + (d.no ? ' ' + faS(d.no) : '') + ': ' + mny(d.total) + ' ' + cur);
   return (shop ? shop + '\n' : '') + 'صورت‌حساب ' + p.name + '\n' + (lines.length ? lines.join('\n') + '\n' : '') + '— مانده تا ' + dateS(Date.now()) + ': ' + bt;
+}
+
+/* ---------- خواندن بارکد (EAN-13 / EAN-8 / UPC-A) از تصویر خاکستری، بدون هیچ کتابخانه‌ی بیرونی ---------- */
+const BC_L = ['0001101', '0011001', '0010011', '0111101', '0100011', '0110001', '0101111', '0111011', '0110111', '0001011'];
+const BC_G = ['0100111', '0110011', '0011011', '0100001', '0011101', '0111001', '0000101', '0010001', '0001001', '0010111'];
+const BC_R = ['1110010', '1100110', '1101100', '1000010', '1011100', '1001110', '1010000', '1000100', '1001000', '1110100'];
+const BC_P = ['LLLLLL', 'LLGLGG', 'LLGGLG', 'LLGGGL', 'LGLLGG', 'LGGLLG', 'LGGGLL', 'LGLGLG', 'LGLGGL', 'LGGLGL'];
+function eanCheck(d) { const n = d.length; let s = 0; for (let i = 0; i < n - 1; i++) s += d[i] * (((n - 1 - i) % 2) ? 3 : 1); return (10 - s % 10) % 10 === d[n - 1]; }
+function eanFromBits(b) { // b: آرایه 0/1 با طول ۹۵ (EAN-13) یا ۶۷ (EAN-8)
+  const m = (a, i, p) => { for (let k = 0; k < p.length; k++) if (a[i + k] !== +p[k]) return false; return true; };
+  const dig = (a, i, tabs) => { for (const [t, tag] of tabs) for (let d = 0; d < 10; d++) if (m(a, i, t[d])) return [d, tag]; return null; };
+  if (b.length === 95) {
+    if (!m(b, 0, '101') || !m(b, 45, '01010') || !m(b, 92, '101')) return null;
+    const ds = []; let par = '';
+    for (let k = 0; k < 6; k++) { const r = dig(b, 3 + k * 7, [[BC_L, 'L'], [BC_G, 'G']]); if (!r) return null; ds.push(r[0]); par += r[1]; }
+    const first = BC_P.indexOf(par); if (first < 0) return null;
+    const out = [first, ...ds];
+    for (let k = 0; k < 6; k++) { const r = dig(b, 50 + k * 7, [[BC_R, 'R']]); if (!r) return null; out.push(r[0]); }
+    return eanCheck(out) ? out.join('') : null;
+  }
+  if (b.length === 67) {
+    if (!m(b, 0, '101') || !m(b, 31, '01010') || !m(b, 64, '101')) return null;
+    const out = [];
+    for (let k = 0; k < 4; k++) { const r = dig(b, 3 + k * 7, [[BC_L, 'L']]); if (!r) return null; out.push(r[0]); }
+    for (let k = 0; k < 4; k++) { const r = dig(b, 36 + k * 7, [[BC_R, 'R']]); if (!r) return null; out.push(r[0]); }
+    return eanCheck(out) ? out.join('') : null;
+  }
+  return null;
+}
+function barcodeRow(g) { const a = Array.from(g); for (const arr of [a, a.slice().reverse()]) for (const [wf, th] of [[8, 0.92], [8, 1.0], [5, 0.85], [12, 0.95], [8, 0.8], [4, 1.0]]) { const r = barcodeRow1(arr, wf, th); if (r) return r; } return null; }
+function barcodeRow1(g, wf, th) { // g: آرایه‌ی روشنایی یک خط؛ خروجی: رشته‌ی بارکد یا null
+  const n = g.length; if (n < 60) return null;
+  const sm = new Float32Array(n); for (let i = 0; i < n; i++) sm[i] = ((g[Math.max(0, i - 1)] + g[i] * 2 + g[Math.min(n - 1, i + 1)]) / 4);
+  /* آستانه‌ی محلی با میانگین متحرک */
+  const w = Math.max(24, n >> (wf === 8 ? 3 : wf === 5 ? 2 : wf === 12 ? 3 : 4)), pre = new Float32Array(n + 1); for (let i = 0; i < n; i++) pre[i + 1] = pre[i] + sm[i];
+  const bin = new Uint8Array(n); for (let i = 0; i < n; i++) { const a = Math.max(0, i - w), c = Math.min(n, i + w), mean = (pre[c] - pre[a]) / (c - a); bin[i] = sm[i] < mean * th ? 1 : 0; }
+  const runs = [], starts = []; let cur = bin[0], len = 1, st = 0; for (let i = 1; i < n; i++) { if (bin[i] === cur) len++; else { runs.push(len); starts.push(st); cur = bin[i]; st = i; len = 1; } } runs.push(len); starts.push(st);
+  const firstBar = bin[0] === 1 ? 0 : 1;
+  for (let i = firstBar; i + 3 < runs.length; i += 2) { // i = ابتدای یک میله
+    const a = runs[i], b2 = runs[i + 1], c = runs[i + 2]; const m0 = (a + b2 + c) / 3; if (m0 < 1.4) continue;
+    if (Math.abs(a - m0) > m0 * 0.55 || Math.abs(b2 - m0) > m0 * 0.55 || Math.abs(c - m0) > m0 * 0.55) continue;
+    const x0 = starts[i];
+    for (const len2 of [95, 67]) {
+      for (let j = i + 2; j < runs.length; j += 2) { // j = میله‌ی پایانی احتمالی
+        const x1 = starts[j] + runs[j], span = x1 - x0, mw = span / len2;
+        if (mw > m0 * 1.3) break; if (mw < m0 * 0.75) continue;
+        const bits = new Array(len2); for (let k = 0; k < len2; k++) bits[k] = bin[Math.min(n - 1, Math.round(x0 + (k + 0.5) * mw))];
+        const r = eanFromBits(bits); if (r) return r;
+      }
+    }
+  }
+  return null;
+}
+function decodeBarcode(gray, w, h) { // gray: Uint8ClampedArray/Array با w*h پیکسل
+  const tryLine = get => { const line = []; const r1 = barcodeRow(get(false)); if (r1) return r1; const rev = get(false).slice().reverse(); return barcodeRow(rev); };
+  const rowAt = y => { const o = new Float32Array(w); for (let x = 0; x < w; x++) { let s = 0; for (let k = -1; k <= 1; k++) s += gray[Math.min(h - 1, Math.max(0, y + k)) * w + x]; o[x] = s / 3; } return o; };
+  const colAt = x => { const o = new Float32Array(h); for (let y = 0; y < h; y++) { let s = 0; for (let k = -1; k <= 1; k++) s += gray[y * w + Math.min(w - 1, Math.max(0, x + k))]; o[y] = s / 3; } return o; };
+  const T = (arr) => { let r = barcodeRow(arr); if (r) return r; return barcodeRow(Array.from(arr).reverse()); };
+  const ys = [0.5, 0.42, 0.58, 0.34, 0.66, 0.26, 0.74, 0.18, 0.82, 0.12, 0.88]; for (const f of ys) { const r = T(rowAt(Math.round(h * f))); if (r) return r; }
+  for (const f of ys) { const r = T(colAt(Math.round(w * f))); if (r) return r; }
+  return null;
+}
+function eanBits(code) { // برای تست و ساخت تصویر نمونه
+  const d = String(code).split('').map(Number); let s = '';
+  if (d.length === 13) { s = '101'; const p = BC_P[d[0]]; for (let i = 0; i < 6; i++) s += (p[i] === 'L' ? BC_L : BC_G)[d[1 + i]]; s += '01010'; for (let i = 0; i < 6; i++) s += BC_R[d[7 + i]]; s += '101'; }
+  else { s = '101'; for (let i = 0; i < 4; i++) s += BC_L[d[i]]; s += '01010'; for (let i = 0; i < 4; i++) s += BC_R[d[4 + i]]; s += '101'; }
+  return s;
 }
 /* ---------------- همگام‌سازی ابری (منطق خالص) ---------------- */
 function chunkStr(str, n) { const out = []; for (let i = 0; i < str.length; i += n) out.push(str.slice(i, i + n)); return out.length ? out : ['']; }
@@ -1396,16 +1465,17 @@ function tabInventory() {
   const val = S.products.reduce((s, p) => s + L.stockValue(S, p.id), 0);
   const q = ui.q.trim();
   const head = '<div class="top"><h1>انبار محصولات</h1><div class="status"><div class="lbl">ارزش کالای موجود (به قیمت خرید)</div><div class="val">' + mu(val) + '</div></div><div class="chips">' + repChip('rep-inv') + '<button class="chip tap" data-a="go-stocktake">انبارگردانی</button></div></div>';
-  return head + '<div class="wrap">' + srow('<div class="search">' + ico('search', 20) + '<input data-in="q" placeholder="جستجوی نام محصول" value="' + esc(ui.q) + '"></div>', 'inv') + '<div id="list">' + invList() + '</div></div>' +
+  return head + '<div class="wrap">' + srow('<div class="search">' + ico('search', 20) + '<input data-in="q" placeholder="جستجوی نام یا بارکد محصول" value="' + esc(ui.q) + '"></div>', 'inv') + '<div id="list">' + invList() + '</div></div>' +
     '<div class="fabs"><button class="fab-x tap" data-a="newprod">محصول جدید</button><button class="fab tap" data-a="fab" aria-label="ثبت جدید">' + ico('plus', 28) + '</button></div>';
 }
+function prodMatch(p, q) { q = (q || '').trim(); if (!q) return true; const d = en(q); return (p.name + ' ' + (p.cat || '')).includes(q) || !!(p.barcode && en(p.barcode).includes(d)); }
 function invList() {
   const q = ui.q.trim();
   if (!S.products.length) return empty('انبار خالیه', 'اول محصول‌هات رو تعریف کن، بعد با «محصول خریدم» موجودی اضافه کن.');
-  const ps = applyProducts(S.products.filter(p => !q || (p.name + ' ' + (p.cat || '')).includes(q)));
+  const ps = applyProducts(S.products.filter(p => prodMatch(p, q)));
   return '<div class="count">' + fa(ps.length) + ' محصول</div><div class="list">' + ps.map(p => {
     const st = L.stockOf(S, p.id), low = p.min && st <= p.min;
-    return rowH({ a: 'prod', id: p.id, title: p.name, sub: (p.cat ? p.cat + (st > 0 ? ' • ' : '') : '') + (st > 0 ? 'آخرین قیمت خرید: ' + money(L.lastBuyPrice(S, p.id)) : ''), icon: 'box', av: st <= 0 ? 'red' : low ? 'amber' : '', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', st > 0 ? mu(L.stockValue(S, p.id)) : '', st <= 0 ? 'neg' : low ? '' : '') });
+    return rowH({ a: 'prod', id: p.id, title: p.name, sub: (p.cat ? p.cat + (st > 0 || p.barcode ? ' • ' : '') : '') + (p.barcode ? 'بارکد ' + p.barcode + (st > 0 ? ' • ' : '') : '') + (st > 0 ? 'آخرین قیمت خرید: ' + money(L.lastBuyPrice(S, p.id)) : ''), icon: 'box', av: st <= 0 ? 'red' : low ? 'amber' : '', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', st > 0 ? mu(L.stockValue(S, p.id)) : '', st <= 0 ? 'neg' : low ? '' : '') });
   }).join('') + '</div>';
 }
 
@@ -1583,6 +1653,7 @@ A['g-save'] = t => {
   const w = t.closest('.sw'), name = $('#gn', w).value.trim(); if (!name) return toast('نام محصول را وارد کن.', 1);
   const cat = $('#gc', w).value.trim(); if (cat && !(S.settings.pcats || []).includes(cat)) (S.settings.pcats = S.settings.pcats || []).push(cat);
   const v = { name, unit: pf.unit, min: num($('#gm', w).value) || 0, cat, barcode: fa(en($('#gbc', w).value.trim())) };
+  if (v.barcode && S.products.some(x => x.id !== w._id && x.barcode && en(x.barcode) === en(v.barcode))) return toast('این بارکد برای محصول دیگری ثبت شده.', 1);
   let p; if (w._id) { p = prod(w._id); Object.assign(p, v); } else { p = { id: L.uid(), ...v }; S.products.push(p); }
   save(); const cb = w._cb; closeSheet(w); render(); if (cb) cb(p);
 };
@@ -1596,7 +1667,7 @@ function openProduct(id) {
     p.el.querySelector('h2').textContent = pr.name;
     const st = L.stockOf(S, id), bs = S.batches.filter(b => b.pid === id).sort((a, b) => b.ts - a.ts || b.seq - a.seq);
     const ds = applyDocs(S.docs.filter(d => (d.items || []).some(i => i.pid === id)), 'docs');
-    p.body.innerHTML = '<div class="boxes g2" style="margin-top:12px"><div class="cell"><small>موجودی</small><b>' + (st > 0 ? qf(st) + ' ' + pr.unit : 'فاقد موجودی') + '</b></div><div class="cell"><small>ارزش به قیمت خرید</small><b>' + mu(L.stockValue(S, id)) + '</b></div></div>' + (pr.cat ? '<div class="hint">دسته‌بندی: ' + esc(pr.cat) + '</div>' : '') +
+    p.body.innerHTML = '<div class="boxes g2" style="margin-top:12px"><div class="cell"><small>موجودی</small><b>' + (st > 0 ? qf(st) + ' ' + pr.unit : 'فاقد موجودی') + '</b></div><div class="cell"><small>ارزش به قیمت خرید</small><b>' + mu(L.stockValue(S, id)) + '</b></div></div>' + (pr.cat ? '<div class="hint">دسته‌بندی: ' + esc(pr.cat) + '</div>' : '') + (pr.barcode ? '<div class="hint">بارکد: <b dir="ltr">' + esc(pr.barcode) + '</b></div>' : '') +
       '<div class="sec"><h3>دسته‌های خرید (مرجع قیمت)</h3><div class="list">' + (bs.map(b => '<div class="row"><span class="tx"><b>' + fa(b.left) + ' از ' + fa(b.qty) + ' ' + pr.unit + '</b><small>' + fdate(b.ts) + (b.fpu > 0 ? ' • شامل کرایه ' + money(b.fpu) : '') + ((b.partners || []).length ? ' • ' + b.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') : '') + '</small></span><span class="end"><b>' + mu(b.price) + '</b><small>هر ' + pr.unit + '</small></span></div>').join('') || empty('هنوز خریدی ثبت نشده')) + '</div></div>' +
       crow('گردش کالا', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('گردشی نیست'));
   };
@@ -1738,7 +1809,7 @@ function invBody() {
     '<div class="f" style="margin-top:6px"><label>شماره فاکتور</label><div class="pick" style="justify-content:center">' + fa(inv.no) + '</div></div></div>' +
     '<div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="inv-party"><span>' + (pt ? esc(pt.name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     (pt ? '<div class="hint ' + (balText(L.partyBal(S, pt.id)).c) + '">' + (Math.abs(L.partyBal(S, pt.id)) < 1 ? 'تسویه' : balText(L.partyBal(S, pt.id)).t + ': ' + balText(L.partyBal(S, pt.id)).amt) + '</div>' : '') +
-    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button></div>' +
+    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button><button class="btn ghost tap" data-a="inv-scan" style="margin-top:8px">' + ico('image', 20) + 'اسکن بارکد (افزودن خودکار به لیست)</button></div>' +
     '<div class="box sec" id="tot"></div>' +
     discBlock(d) +
     '<button class="chk tap" data-a="inv-tax" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="taxb">' + ico('check', 16) + '</span><span>مالیات بر ارزش افزوده (' + fa(S.settings.taxRate) + '٪)</span></button>' +
@@ -1804,10 +1875,24 @@ A['inv-save'] = () => {
 /* اقلام */
 let it = null; chipH.dummy = () => {};
 A['inv-add'] = () => itemSheet(-1);
+A['inv-scan'] = () => {
+  const sale = inv.kind === 'sale';
+  scanBarcode(txt => {
+    const code = en(txt), p = S.products.find(x => x.barcode && en(x.barcode) === code);
+    if (!p) return 'محصولی با بارکد ' + fa(code) + ' پیدا نشد (اول در محصول ثبتش کن)';
+    const ex = inv.d.items.find(i => i.pid === p.id);
+    if (ex) ex.qty = (+ex.qty || 0) + 1;
+    else { const price = (sale ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id)) || 0; inv.d.items.push({ pid: p.id, qty: 1, price, partners: [] }); }
+    invUpd();
+    const q = (ex || inv.d.items[inv.d.items.length - 1]).qty, st = L.stockOf(S, p.id);
+    return '✓ ' + p.name + ' — تعداد: ' + fa(q) + (sale && q > st ? ' (موجودی کافی نیست!)' : '');
+  }, { multi: true, onEnd: () => { const i = inv.d.items.findIndex(x => !(x.price > 0)); if (i >= 0) { toast('قیمت این محصول را وارد کن.'); itemSheet(i); } } });
+};
 A['inv-edit'] = t => itemSheet(+t.dataset.i);
 function itemSheet(idx) {
   const ex = idx >= 0 ? inv.d.items[idx] : null; it = { idx, pid: ex ? ex.pid : '' };
   const w = openSheet('<h3 class="st">' + (inv.kind === 'sale' ? 'اضافه کردن محصول برای فروش' : 'اضافه کردن محصول برای خرید') + '</h3><div class="f"><label>نام محصول *</label><button class="pick tap" data-a="it-prod"><span id="itn">' + (ex ? esc(prod(ex.pid).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
+    '<div class="f"><label for="itbc">بارکد محصول (اختیاری)</label><div style="display:flex;gap:8px"><input id="itbc" inputmode="numeric" value="' + esc(ex ? (prod(ex.pid).barcode || '') : '') + '" autocomplete="off" style="flex:1"><button type="button" class="sbtn tap" data-a="it-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div></div>' +
     field('تعداد *', 'iq', ex ? fa(ex.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + field('قیمت هر واحد (' + cur() + ') *', 'ip', ex ? fa(grp(ex.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iinfo-m"') +
     (inv.kind === 'buy' ? ppSection(ex) : '') + '<div class="hint" id="iinfo"></div><div class="pr"><button class="btn tap" data-a="it-ok">' + (ex ? 'ثبت تغییر' : 'افزودن') + '</button>' + (ex ? '<button class="btn danger tap" data-a="it-del">حذف</button>' : '') + '</div>');
   it.w = w; itInfo();
@@ -1826,7 +1911,7 @@ function itInfo() {
   e.innerHTML = h;
 }
 A['it-prod'] = () => pickProduct(p => {
-  it.pid = p.id; $('#itn', it.w).textContent = p.name;
+  it.pid = p.id; $('#itn', it.w).textContent = p.name; $('#itbc', it.w).value = p.barcode || '';
   const price = inv.kind === 'sale' ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id);
   if (price && !num($('#ip', it.w).value)) $('#ip', it.w).value = fa(grp(price));
   itInfo();
@@ -1844,9 +1929,12 @@ A['it-ok'] = () => {
   const q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value);
   if (!it.pid) return toast('محصول را انتخاب کن.', 1); if (!(q > 0)) return toast('تعداد را وارد کن.', 1); if (!(pr >= 0) || $('#ip', it.w).value.trim() === '') return toast('قیمت را وارد کن.', 1);
   const pp = []; if (inv.kind === 'buy') S.partners.forEach((p, i) => { const val = num($('#ppv' + i, it.w).value); if (val > 0) pp.push({ partnerId: p.id, mode: $('#ppm' + i, it.w).value, value: val }); });
+  const bc = fa(en($('#itbc', it.w).value.trim())), pd = prod(it.pid);
+  if (bc && bc !== (pd.barcode || '')) { if (S.products.some(x => x.id !== pd.id && x.barcode && en(x.barcode) === en(bc))) return toast('این بارکد برای محصول دیگری ثبت شده.', 1); pd.barcode = bc; save(); }
   const row = { pid: it.pid, qty: q, price: pr, partners: pp }; if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
   closeSheet(it.w); invUpd();
 };
+A['it-scan'] = () => scanBarcode(txt => { const e = $('#itbc', it.w); if (e) e.value = fa(en(txt)); });
 A['it-del'] = () => { inv.d.items.splice(it.idx, 1); closeSheet(it.w); invUpd(); };
 
 /* شریک در فاکتور */
@@ -2451,8 +2539,10 @@ A['go-rem'] = () => openRem();
 function openStocktake() {
   const ps = S.products.slice().sort((a, b) => cmpFa(a.name, b.name));
   const p = openPage({ title: 'انبارگردانی', body: '<div class="hint" style="margin-top:12px">موجودی واقعی هر کالا را بشمار و بنویس. فقط ردیف‌های پرشده و متفاوت ثبت می‌شوند. کسری با قیمت تمام‌شده از سود کم و اضافی به قیمت آخرین خرید به انبار اضافه می‌شود.</div>' +
-    '<div class="list" style="margin-top:8px">' + (ps.map(pr => { const st = L.stockOf(S, pr.id); return '<div class="row"><span class="tx"><b>' + esc(pr.name) + '</b><small>در دفتر: ' + qf(st) + ' ' + esc(pr.unit) + '</small></span><span class="end"><input class="stin" inputmode="decimal" data-in="stc" data-id="' + pr.id + '" data-sys="' + st + '" placeholder="شمارش" autocomplete="off"><small class="stdf" id="sdf_' + pr.id + '"></small></span></div>'; }).join('') || empty('محصولی نیست')) + '</div>', foot: '<button class="btn tap" data-a="st-save">ثبت اصلاح‌ها</button>' });
+    '<div class="srow" style="margin:10px 0 0"><div class="search">' + ico('search', 20) + '<input data-in="stq" placeholder="جستجوی نام یا بارکد" autocomplete="off"></div><button class="sbtn tap" data-a="stq-scan" aria-label="اسکن">' + ico('image', 20) + '</button></div><div class="list" style="margin-top:8px">' + (ps.map(pr => { const st = L.stockOf(S, pr.id); return '<div class="row stqr" data-pid="' + pr.id + '"><span class="tx"><b>' + esc(pr.name) + '</b><small>' + (pr.barcode ? 'بارکد ' + esc(pr.barcode) + ' • ' : '') + 'در دفتر: ' + qf(st) + ' ' + esc(pr.unit) + '</small></span><span class="end"><input class="stin" inputmode="decimal" data-in="stc" data-id="' + pr.id + '" data-sys="' + st + '" placeholder="شمارش" autocomplete="off"><small class="stdf" id="sdf_' + pr.id + '"></small></span></div>'; }).join('') || empty('محصولی نیست')) + '</div>', foot: '<button class="btn tap" data-a="st-save">ثبت اصلاح‌ها</button>' });
 }
+I.stq = t => { const q = t.value; document.querySelectorAll('.stqr').forEach(r => { const p = prod(r.dataset.pid); r.style.display = p && prodMatch(p, q) ? '' : 'none'; }); };
+A['stq-scan'] = t => { const pg = t.closest('.page'); scanBarcode(txt => { const e = $('[data-in=stq]', pg); if (e) { e.value = fa(en(txt)); I.stq(e); } }); };
 I.stc = t => { const v = t.value.trim(), e = document.getElementById('sdf_' + t.dataset.id); if (!e) return; if (!v) { e.textContent = ''; return; } const d = num(v) - +t.dataset.sys; e.textContent = Math.abs(d) < 1e-9 ? 'بدون اختلاف' : (d > 0 ? '+' : '−') + qf(Math.abs(d)); e.className = d < 0 ? 'neg' : d > 0 ? 'pos' : ''; };
 A['go-stocktake'] = () => openStocktake();
 A['st-save'] = t => {
@@ -2521,22 +2611,40 @@ A['sn-rest'] = t => { const id = t.dataset.id; ask('اطلاعات برنامه 
 
 /* ================= بارکد ================= */
 let bcS = null;
-function stopScan() { if (bcS) { bcS.on = false; try { bcS.stream.getTracks().forEach(t => t.stop()); } catch (e) {} bcS = null; } }
-async function scanBarcode(cb) {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return toast('این دستگاه دوربین را در مرورگر نمی‌دهد. بارکد را تایپ کن.', 1);
-  let det = null;
-  if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch (e) { det = null; } }
-  if (!det) {
-    try { await new Promise((res, rej) => { if (window.ZXing) return res(); const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); } catch (e) { return toast('اسکن با دوربین در این دستگاه ممکن نشد. بارکد را تایپ کن یا با اسکنر وارد کن.', 1); }
-  }
-  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); } catch (e) { return toast('اجازهٔ دوربین داده نشد.', 1); }
-  const w = openSheet('<h3 class="st">بارکد را جلوی دوربین بگیر</h3><video id="bcv" class="bcv" playsinline muted></video><div class="pr"><button class="btn ghost tap" data-a="bc-close">بستن</button></div>');
-  const v = $('#bcv', w); v.srcObject = stream; try { await v.play(); } catch (e) {}
-  bcS = { stream, on: true, w }; const fin = txt => { if (!bcS || !bcS.on) return; stopScan(); closeSheet(w); cb(txt); };
-  if (det) { const tick = async () => { if (!bcS || !bcS.on) return; try { const r = await det.detect(v); if (r && r[0]) return fin(r[0].rawValue); } catch (e) {} setTimeout(tick, 250); }; tick(); }
-  else { const tick = async () => { if (!bcS || !bcS.on) return; try { const c = document.createElement('canvas'); c.width = v.videoWidth; c.height = v.videoHeight; if (c.width) { c.getContext('2d').drawImage(v, 0, 0); const lum = new ZXing.HTMLCanvasElementLuminanceSource(c), bmp = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(lum)); const r = new ZXing.MultiFormatReader().decode(bmp); if (r) return fin(r.getText()); } } catch (e) {} setTimeout(tick, 300); }; tick(); }
+function stopScan() { if (bcS) { bcS.on = false; try { bcS.stream && bcS.stream.getTracks().forEach(t => t.stop()); } catch (e) {} bcS = null; } }
+function bcBeep() { try { navigator.vibrate && navigator.vibrate(60); const C = window.AudioContext || window.webkitAudioContext; if (!C) return; const c = new C(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 1100; g.gain.value = .08; o.connect(g); g.connect(c.destination); o.start(); setTimeout(() => { o.stop(); c.close(); }, 110); } catch (e) {} }
+function grayOf(src, sw, sh, maxW) { /* src: video/canvas/img */ const sc = Math.min(1, maxW / sw), w = Math.max(1, Math.round(sw * sc)), h = Math.max(1, Math.round(sh * sc)); const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(src, 0, 0, w, h); const d = x.getImageData(0, 0, w, h).data, g = new Uint8Array(w * h); for (let i = 0, j = 0; j < g.length; i += 4, j++) g[j] = (d[i] * 77 + d[i + 1] * 150 + d[i + 2] * 29) >> 8; return { g, w, h }; }
+function decodeFrame(src, sw, sh, widths) { for (const mw of widths) { const o = grayOf(src, sw, sh, mw); const r = L.decodeBarcode(o.g, o.w, o.h); if (r) return r; } return null; }
+function decodePhoto(file) { return new Promise(res => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => { let r = null; try { r = decodeFrame(im, im.naturalWidth, im.naturalHeight, [1600, 1100, 800, 2200]); } catch (e) {} URL.revokeObjectURL(u); res(r); }; im.onerror = () => { URL.revokeObjectURL(u); res(null); }; im.src = u; }); }
+/* opts.multi: دوربین باز می‌ماند و هر بارکد جدید به cb داده می‌شود */
+async function scanBarcode(cb, opts) {
+  opts = opts || {}; stopScan();
+  let det = null; if ('BarcodeDetector' in window) { try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e'] }); } catch (e) { det = null; } }
+  const w = openSheet('<h3 class="st">' + (opts.multi ? 'اسکن پیاپی بارکد' : 'بارکد را جلوی دوربین بگیر') + '</h3><div class="bcbox"><video id="bcv" class="bcv" playsinline muted autoplay></video><i class="bcl"></i></div><div class="hint" id="bcm" style="text-align:center">در حال باز کردن دوربین...</div><div class="pr"><label class="btn ghost tap" style="text-align:center;cursor:pointer">عکس گرفتن از بارکد<input type="file" id="bcf" accept="image/*" capture="environment" style="display:none"></label><button class="btn ghost tap" data-a="bc-close">' + (opts.multi ? 'پایان' : 'بستن') + '</button></div>');
+  const msg = t => { const e = $('#bcm', w); if (e) e.textContent = t; };
+  bcS = { on: true, w, stream: null, onEnd: opts.onEnd }; const me = bcS; let last = '', lastT = 0;
+  const got = txt => { if (bcS !== me || !me.on) return; const t = Date.now(); if (txt === last && t - lastT < 2500) { lastT = t; return; } last = txt; lastT = t; bcBeep(); if (opts.multi) { const m = cb(txt); msg(typeof m === 'string' ? m : 'خوانده شد: ' + fa(txt)); } else { stopScan(); closeSheet(w); cb(txt); } };
+  $('#bcf', w).onchange = async e => { const f = e.target.files[0]; if (!f) return; msg('در حال خواندن عکس...'); const r = await decodePhoto(f); if (r) got(r); else msg('بارکدی در عکس پیدا نشد. نزدیک‌تر و صاف‌تر و با نور بهتر دوباره بگیر، یا بارکد را تایپ کن.'); e.target.value = ''; };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { msg('این مرورگر دوربین زنده نمی‌دهد؛ با «عکس گرفتن از بارکد» ادامه بده.'); return; }
+  let stream; try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); } catch (e) { msg('اجازهٔ دوربین داده نشد (تنظیمات مرورگر → دوربین). می‌توانی با «عکس گرفتن از بارکد» ادامه بدهی.'); return; }
+  if (bcS !== me) { stream.getTracks().forEach(t => t.stop()); return; }
+  me.stream = stream; const v = $('#bcv', w); v.srcObject = stream; try { await v.play(); } catch (e) {}
+  msg('بارکد را وسط کادر و صاف بگیر');
+  const tick = async () => {
+    if (bcS !== me || !me.on) return;
+    try {
+      if (v.videoWidth) {
+        let r = null;
+        if (det) { try { const x = await det.detect(v); if (x && x[0]) r = x[0].rawValue; } catch (e) { det = null; } }
+        if (!r) r = decodeFrame(v, v.videoWidth, v.videoHeight, [960, 1280]);
+        if (r) got(r);
+      }
+    } catch (e) {}
+    setTimeout(tick, 140);
+  };
+  tick();
 }
-A['bc-close'] = t => { stopScan(); closeSheet(t.closest('.sw')); };
+A['bc-close'] = t => { const oe = bcS && bcS.onEnd; stopScan(); closeSheet(t.closest('.sw')); if (oe) oe(); };
 A['g-scan'] = t => scanBarcode(txt => { const e = $('#gbc'); if (e) e.value = fa(en(txt)); });
 function pickProduct(cb, kind) {
   const w = openSheet('<h3 class="st">انتخاب محصول</h3><div class="srow" style="margin:0 0 8px"><div class="search">' + ico('search', 20) + '<input id="gq" data-in="gq" placeholder="نام یا بارکد" autocomplete="off"></div><button class="sbtn tap" data-a="gp-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div><div class="list" id="gl"></div><div class="pr"><button class="btn ghost tap" data-a="gp-new">محصول جدید</button></div>');
@@ -2544,7 +2652,7 @@ function pickProduct(cb, kind) {
 }
 function gpDraw(w, q) {
   const kind = w._kind, qq = en(q || '').trim();
-  const ps = S.products.filter(p => !qq || (p.name + ' ' + (p.cat || '')).includes(q.trim()) || (p.barcode && en(p.barcode).includes(qq)));
+  const ps = S.products.filter(p => prodMatch(p, q));
   $('#gl', w).innerHTML = ps.map(p => { const st = L.stockOf(S, p.id); return rowH({ a: 'gp-pick', id: p.id, title: p.name, sub: p.barcode ? 'بارکد ' + p.barcode : '', icon: 'box', av: kind === 'sale' && st <= 0 ? 'red' : '', end: endH(st > 0 ? qf(st) + ' ' + p.unit : 'فاقد موجودی', '', st > 0 ? '' : 'neg') }); }).join('') || '<div class="hint" style="text-align:center">' + (S.products.length ? 'محصولی پیدا نشد.' : 'هنوز محصولی تعریف نشده.') + '</div>';
 }
 I.gq = t => { const w = t.closest('.sw'); gpDraw(w, t.value); const qq = en(t.value).trim(); if (qq.length >= 6) { const m = S.products.filter(p => p.barcode && en(p.barcode) === qq); if (m.length === 1) { const cb = w._cb; closeSheet(w); cb(m[0]); } } };
