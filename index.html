@@ -506,6 +506,28 @@ function planCost(batches, pid, qty, mode) {
   return { cost, consumed };
 }
 
+/* ---------- جایزهٔ تأمین‌کننده: برداشت از موجودیِ «جایزه» و بازمحاسبهٔ قیمت خرید (ارزش حفظ می‌شود) ---------- */
+function bonusAvail(b) { return Math.max(0, Math.min(b.bonusLeft || 0, b.left)); }
+function bonusTake(b, t) {
+  const L = b.left; let v = 0, np = b.price;
+  if (L - t > 1e-9) np = L * b.price / (L - t); else v = R(L * b.price);
+  b.left = L - t; b.bonusLeft = Math.max(0, (b.bonusLeft || 0) - t); b.price = np; return v;
+}
+function bonusPut(b, t, v) {
+  const L = b.left;
+  if (L > 1e-9) b.price = L * b.price / (L + t); else if (v > 0 && t > 0) b.price = v / t;
+  b.left = L + t; b.bonusLeft = (b.bonusLeft || 0) + t;
+}
+function planBonus(batches, pid, qty) {
+  const live = batches.filter(b => b.pid === pid && bonusAvail(b) > 1e-9).sort((a, b) => a.ts - b.ts || a.seq - b.seq);
+  const avail = live.reduce((s, b) => s + bonusAvail(b), 0);
+  if (qty > avail + 1e-9) return { error: true, avail };
+  let need = qty; const consumed = [];
+  for (const b of live) { if (need <= 1e-9) break; const t = Math.min(bonusAvail(b), need); consumed.push({ bid: b.id, qty: t, bonus: true }); need -= t; }
+  return { consumed };
+}
+function bonusStock(S, pid) { return S.batches.reduce((s, b) => b.pid === pid ? s + bonusAvail(b) : s, 0); }
+
 function partnerApplies(S, pid, productId) {
   const p = S.partners.find(x => x.id === pid);
   return p && (!p.pids || !p.pids.length || p.pids.includes(productId));
@@ -524,18 +546,31 @@ function previewSale(S, d) {
   const mode = S.settings.costMode;
   const items = (d.items || []).filter(i => i.pid);
   if (!items.length) return { error: 'حداقل یک محصول اضافه کنید.' };
-  const tmp = S.batches.map(b => ({ id: b.id, pid: b.pid, ts: b.ts, seq: b.seq, left: b.left, price: b.price }));
+  const tmp = S.batches.map(b => ({ id: b.id, pid: b.pid, ts: b.ts, seq: b.seq, left: b.left, price: b.price, bonusLeft: b.bonusLeft || 0 }));
   const out = [];
   for (const it of items) {
     const qty = +it.qty, price = +it.price;
     const prod = S.products.find(p => p.id === it.pid);
     if (!(qty > 0)) return { error: 'تعداد باید بیشتر از صفر باشد.' };
     if (!(price >= 0)) return { error: 'قیمت فروش معتبر نیست.' };
-    const plan = planCost(tmp, it.pid, qty, mode);
-    if (plan.error) return { error: `موجودی «${prod ? prod.name : ''}» کافی نیست (موجود: ${plan.avail}).` };
-    for (const c of plan.consumed) tmp.find(b => b.id === c.bid).left -= c.qty;
+    const gift = !!it.gift, gsrc = gift && it.gsrc === 'bonus' ? 'bonus' : 'stock';
+    if (gift && price !== 0) return { error: 'قیمت جایزه باید صفر باشد.' };
+    let plan;
+    if (gift && gsrc === 'bonus') {
+      plan = planBonus(tmp, it.pid, qty);
+      if (plan.error) return { error: `جایزهٔ دریافتی «${prod ? prod.name : ''}» کافی نیست (موجود: ${+plan.avail.toFixed(6)}).` };
+      let cost = 0;
+      for (const c of plan.consumed) { c.v = bonusTake(tmp.find(b => b.id === c.bid), c.qty); cost += c.v; }
+      plan.cost = cost;
+    } else {
+      plan = planCost(tmp, it.pid, qty, mode);
+      if (plan.error) return { error: `موجودی «${prod ? prod.name : ''}» کافی نیست (موجود: ${plan.avail}).` };
+      for (const c of plan.consumed) tmp.find(b => b.id === c.bid).left -= c.qty;
+    }
     const total = R(qty * price);
-    out.push({ pid: it.pid, qty, price, total, cost: plan.cost, profit: total - plan.cost, consumed: plan.consumed });
+    const row = { pid: it.pid, qty, price, total, cost: plan.cost, profit: total - plan.cost, consumed: plan.consumed };
+    if (gift) { row.gift = true; row.gsrc = gsrc; }
+    out.push(row);
   }
   const gross = out.reduce((s, i) => s + i.total, 0);
   const disc = calcDisc(gross, d);
@@ -554,7 +589,7 @@ function previewSale(S, d) {
     let amount = 0;
     const app = out.filter(i => partnerApplies(S, dp.partnerId, i.pid));
     if (dp.mode === 'percent') { amount = R(app.reduce((s, i) => s + i.profit, 0) * (+dp.value || 0) / 100); pctSum += +dp.value || 0; }
-    else amount = R(app.reduce((s, i) => s + i.qty, 0) * (+dp.value || 0));
+    else amount = R(app.filter(i => !i.gift).reduce((s, i) => s + i.qty, 0) * (+dp.value || 0));
     shares.push({ partnerId: dp.partnerId, mode: dp.mode, value: +dp.value || 0, amount });
   }
   /* سهم شریک از شرایط ثبت‌شده در خرید هر محصول (دسته‌ی خرید) */
@@ -565,7 +600,7 @@ function previewSale(S, d) {
     for (const bp of b.partners) {
       if (!(+bp.value > 0)) continue;
       const a = auto[bp.partnerId] || (auto[bp.partnerId] = { amount: 0, pBase: 0, pQty: 0, modes: new Set() });
-      if (bp.mode === 'percent') { a.amount += chunk * bp.value / 100; a.pBase += chunk; } else { a.amount += c.qty * bp.value; a.pQty += c.qty; }
+      if (bp.mode === 'percent') { a.amount += chunk * bp.value / 100; a.pBase += chunk; } else { if (it.gift) continue; a.amount += c.qty * bp.value; a.pQty += c.qty; }
       a.modes.add(bp.mode);
     }
   }
@@ -609,14 +644,17 @@ function deleteDocRaw(S, id) {
   const doc = S.docs.find(x => x.id === id); if (!doc) throw new Error('سند پیدا نشد.');
   if (doc.type === 'sale') {
     if (doc.items.some(i => i.ret > 0)) throw new Error('این فاکتور مرجوعی دارد؛ ابتدا مرجوعی‌های آن را حذف کنید.');
-    for (const it of doc.items) for (const c of it.consumed) { const b = S.batches.find(x => x.id === c.bid); if (b) b.left += c.qty; }
+    for (const it of doc.items) for (const c of it.consumed) { const b = S.batches.find(x => x.id === c.bid); if (b) { if (c.bonus) bonusPut(b, c.qty, c.v || 0); else b.left += c.qty; } }
   } else if (doc.type === 'sret') {
     const src = S.docs.find(x => x.id === doc.srcId);
     for (const r of doc.restored) {
       const b = S.batches.find(x => x.id === r.bid);
       if (!b || b.left < r.qty - 1e-9) throw new Error('بخشی از کالای مرجوعی دوباره فروخته شده و حذف این مرجوعی ممکن نیست.');
     }
-    for (const r of doc.restored) S.batches.find(x => x.id === r.bid).left -= r.qty;
+    for (const r of doc.restored) {
+      const b = S.batches.find(x => x.id === r.bid), c = src && src.items[r.idx] && src.items[r.idx].consumed[r.ci];
+      if (c && c.bonus) bonusTake(b, r.qty); else b.left -= r.qty;
+    }
     if (src && doc.trk) {
       for (const k of Object.keys(doc.trk.items)) { const t = doc.trk.items[k], it = src.items[+k]; it.ret -= t.q; it.retTotal -= t.t; it.retCost -= t.c; }
       for (const r of doc.restored) { const c = src.items[r.idx].consumed[r.ci]; c.ret = (c.ret || 0) - r.qty; }
@@ -660,7 +698,7 @@ function addSale(S, d, editId) {
     if (d.payType !== 'credit') needAccount(s, d);
     if (no == null) no = s.settings.nextSale++;
     const id = uid(), seq = nextSeq(s);
-    for (const it of pv.items) for (const c of it.consumed) s.batches.find(b => b.id === c.bid).left -= c.qty;
+    for (const it of pv.items) for (const c of it.consumed) { const b = s.batches.find(x => x.id === c.bid); if (c.bonus) bonusTake(b, c.qty); else b.left -= c.qty; }
     const doc = { id, seq, type: 'sale', no, ts, ledgerId: d.ledgerId, partyId: d.partyId, items: pv.items, gross: pv.gross, disc: pv.disc, discMode: d.discMode || 'amount', discVal: +d.discVal || 0, sub: pv.sub, tax: pv.tax, extra: pv.extra, total: pv.total,
       payType: d.payType, accountId: d.payType !== 'credit' ? d.accountId : null, visitorId: d.visitorId || null, shares: pv.shares, visitorComm: pv.visitorComm,
       profit: pv.profit, ownerShare: pv.ownerShare, note: d.note || '', att: d.att || [], dueTs: d.payType === 'credit' ? (d.dueTs || null) : null };
@@ -696,7 +734,7 @@ function addSaleReturn(S, d) {
       for (let ci = it.consumed.length - 1; ci >= 0 && need > 1e-9; ci--) {
         const c = it.consumed[ci], room = c.qty - (c.ret || 0); if (room <= 1e-9) continue;
         const t = Math.min(room, need), b = s.batches.find(x => x.id === c.bid);
-        if (b) b.left += t; else s.batches.push({ id: c.bid, ref: null, pid: it.pid, ts: src.ts, seq: nextSeq(s), qty: t, left: t, price: it.qty ? it.cost / it.qty : 0, partners: [] });
+        if (b && c.bonus) bonusPut(b, t, (c.v || 0) * t / c.qty); else if (b) b.left += t; else s.batches.push({ id: c.bid, ref: null, pid: it.pid, ts: src.ts, seq: nextSeq(s), qty: t, left: t, price: it.qty ? it.cost / it.qty : 0, partners: [] });
         c.ret = (c.ret || 0) + t; need -= t; restored.push({ bid: c.bid, qty: t, idx: l.idx, ci });
       }
       it.ret = (it.ret || 0) + q; it.retTotal = (it.retTotal || 0) + total; it.retCost = (it.retCost || 0) + cst;
@@ -750,19 +788,30 @@ function calcBuy(S, d) {
     const qty = +i.qty, price = +i.price;
     if (!(qty > 0)) throw new Error('تعداد باید بیشتر از صفر باشد.');
     if (!(price >= 0)) throw new Error('قیمت خرید معتبر نیست.');
-    return { pid: i.pid, qty, price, total: R(qty * price), partners: (i.partners || []).filter(p => +p.value > 0).map(p => ({ partnerId: p.partnerId, mode: p.mode, value: +p.value })) };
+    const gift = !!i.gift, bonus = gift ? 0 : (+i.bonus || 0);
+    if (!(bonus >= 0)) throw new Error('تعداد جایزه معتبر نیست.');
+    return { pid: i.pid, qty, price, total: gift ? 0 : R(qty * price), ...(gift ? { gift: true, ref: R(qty * price) } : bonus ? { bonus } : {}), partners: (i.partners || []).filter(p => +p.value > 0).map(p => ({ partnerId: p.partnerId, mode: p.mode, value: +p.value })) };
   });
+  if (!out.some(r => !r.gift)) throw new Error('حداقل یک کالای خریداری‌شده (غیر از جایزه) لازم است.');
   const gross = out.reduce((s, i) => s + i.total, 0);
   const dc = calcDisc(gross, d); if (dc.error) throw new Error(dc.error);
   let left = dc.amount;
-  out.forEach((r, k) => { const x = k === out.length - 1 ? left : R(dc.amount * r.total / gross); left -= x; r.disc = x; r.net = r.total - x; });
+  const lastPaid = out.map(r => !r.gift).lastIndexOf(true);
+  out.forEach((r, k) => { const x = r.gift ? 0 : k === lastPaid ? left : R(dc.amount * r.total / gross); left -= x; r.disc = x; r.net = r.total - x; });
   const sub = gross - dc.amount;
   const tax = d.taxOn ? R(sub * (S.settings.taxRate || 0) / 100) : 0;
   const freight = R(+d.freight || 0);
   if (freight < 0) throw new Error('کرایه معتبر نیست.');
   const by = d.freightBy === 'amount' && sub > 0 ? 'amount' : 'qty';
-  const totQty = out.reduce((s, i) => s + i.qty, 0);
-  out.forEach(r => { const share = by === 'amount' ? freight * r.net / sub : freight * r.qty / totQty; r.fpu = r.qty ? share / r.qty : 0; r.dpu = r.qty ? r.disc / r.qty : 0; r.unitCost = r.price - r.dpu + r.fpu; });
+  const totQty = out.reduce((s, i) => s + (i.gift ? 0 : i.qty), 0);
+  out.forEach(r => { if (r.gift) { r.fpu = 0; r.dpu = 0; return; } const share = by === 'amount' ? freight * r.net / sub : freight * r.qty / totQty; r.fpu = r.qty ? share / r.qty : 0; r.dpu = r.qty ? r.disc / r.qty : 0; r.unitCost = r.price - r.dpu + r.fpu; });
+  /* جایزه: هزینهٔ پرداختی بین همهٔ واحدها (پولی + جایزه) به نسبت ارزش مرجع تقسیم می‌شود */
+  const Vn = out.reduce((s, r) => s + (r.gift ? 0 : r.qty * r.price), 0), G = out.reduce((s, r) => s + (r.gift ? r.ref : 0), 0), f = Vn + G > 0 ? Vn / (Vn + G) : 1;
+  const Cp = out.reduce((s, r) => s + (r.gift ? 0 : r.qty * r.unitCost), 0);
+  out.forEach(r => {
+    if (r.gift) r.unitCost = Vn + G > 0 ? Cp * r.price / (Vn + G) : 0;
+    else r.unitCost = r.unitCost * f * (r.bonus ? r.qty / (r.qty + r.bonus) : 1);
+  });
   return { out, gross, disc: dc.amount, sub, tax, freight, by, freightInv: (d.freightMode || 'inv') === 'inv' };
 }
 function addBuy(S, d, editId) {
@@ -776,7 +825,7 @@ function addBuy(S, d, editId) {
     if (no == null) no = s.settings.nextBuy++;
     const id = uid(), seq = nextSeq(s);
     const total = c.sub + c.tax + (c.freightInv ? c.freight : 0);
-    for (const it of c.out) s.batches.push({ id: uid(), ref: id, pid: it.pid, ts: d.ts, seq: nextSeq(s), qty: it.qty, left: it.qty, price: it.unitCost, base: it.price, fpu: it.fpu, partners: it.partners });
+    for (const it of c.out) { const bn = it.gift ? it.qty : (it.bonus || 0), q = it.gift ? it.qty : it.qty + bn; s.batches.push({ id: uid(), ref: id, pid: it.pid, ts: d.ts, seq: nextSeq(s), qty: q, left: q, bonus: bn, bonusLeft: bn, price: it.unitCost, base: it.price, fpu: it.fpu, partners: it.partners }); }
     const doc = { id, seq, type: 'buy', no, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, items: c.out, gross: c.gross, disc: c.disc, discMode: d.discMode || 'amount', discVal: +d.discVal || 0, sub: c.sub, tax: c.tax, freight: c.freight, freightMode: c.freightInv ? 'inv' : 'acct', freightBy: c.by, freightAcct: c.freightInv ? null : d.freightAcct, total,
       payType: d.payType, accountId: d.payType !== 'credit' ? d.accountId : null, note: d.note || '', att: d.att || [], dueTs: d.payType === 'credit' ? (d.dueTs || null) : null };
     s.docs.push(doc);
@@ -939,7 +988,19 @@ function summary(S, r) {
   const adjLoss = lossBy.adj + lossBy.bret + lossBy.in + lossBy.out + lossBy.use + lossBy.waste;
   const byProduct = {};
   for (const d of sales) for (const i of d.items) { const b = byProduct[i.pid] || (byProduct[i.pid] = { pid: i.pid, qty: 0, rev: 0, profit: 0 }); b.qty += i.qty; b.rev += i.total; b.profit += i.profit; }
-  return { count: sales0.length, rev, cost, profit, comm, owner, partners, salary, exp, inc, adjLoss, lossBy, net: owner - salary + inc - exp - adjLoss, byProduct: Object.values(byProduct) };
+  const giftSale = sum(sales0, d => sum(d.items.filter(i => i.gift), i => i.cost)), giftRecv = sum(docs.filter(d => d.type === 'buy'), d => sum(d.items.filter(i => i.gift || i.bonus), i => i.gift ? i.qty * i.unitCost : i.bonus * i.unitCost));
+  return { count: sales0.length, giftSale, giftRecv, rev, cost, profit, comm, owner, partners, salary, exp, inc, adjLoss, lossBy, net: owner - salary + inc - exp - adjLoss, byProduct: Object.values(byProduct) };
+}
+
+/* ---------- مشتریانی که مدتی خرید نکرده‌اند ---------- */
+function churnList(S, days, now, ledgerId) {
+  now = now || Date.now(); const lim = now - days * 864e5, m = {};
+  for (const d of S.docs) {
+    if (d.type !== 'sale' || (ledgerId && d.ledgerId !== ledgerId)) continue;
+    const x = m[d.partyId] || (m[d.partyId] = { partyId: d.partyId, last: 0, count: 0, total: 0 });
+    if (d.ts > x.last) x.last = d.ts; x.count++; x.total += d.total || 0;
+  }
+  return Object.values(m).filter(x => x.last <= lim && S.parties.some(p => p.id === x.partyId)).map(x => ({ ...x, days: Math.floor((now - x.last) / 864e5), bal: partyBal(S, x.partyId) })).sort((a, b) => b.days - a.days);
 }
 
 /* ---------- آمار و تحلیل فروش ---------- */
@@ -1004,7 +1065,7 @@ function nameOfDocParty(S, d) {
   return '';
 }
 function itemLines(S, d) {
-  return (d.items || []).map(i => { const p = S.products.find(x => x.id === i.pid) || {}; return (p.name || '') + ': ' + qtyS(i.qty) + ' ' + (p.unit || '') + ' × ' + mny(i.price) + ' = ' + mny(i.total); });
+  return (d.items || []).map(i => { const p = S.products.find(x => x.id === i.pid) || {}; if (i.gift) return (p.name || '') + ' (جایزه): ' + qtyS(i.qty) + ' ' + (p.unit || ''); return (p.name || '') + ': ' + qtyS(i.qty) + ' ' + (p.unit || '') + ' × ' + mny(i.price) + ' = ' + mny(i.total) + (i.bonus ? ' (+' + qtyS(i.bonus) + ' جایزه)' : ''); });
 }
 function docDesc(S, d) {
   const L_ = itemLines(S, d); if (d.note) L_.push('توضیحات: ' + d.note);
@@ -1026,7 +1087,7 @@ function invoiceData(S, id) {
   const party = S.parties.find(p => p.id === d.partyId) || {};
   const prev = partyBalBefore(S, d.partyId, d);
   const eff = sum(S.pent.filter(e => e.ref === id && e.partyId === d.partyId), e => e.delta);
-  const items = d.items.map(i => { const p = S.products.find(x => x.id === i.pid) || {}; return { name: p.name || '', unit: p.unit || '', qty: i.qty, price: i.price, total: i.gross != null ? i.gross : i.total, disc: i.disc || 0 }; });
+  const items = d.items.map(i => { const p = S.products.find(x => x.id === i.pid) || {}; return { name: (p.name || '') + (i.gift ? ' (جایزه)' : i.bonus ? ' (+' + qtyS(i.bonus) + ' جایزه)' : ''), unit: p.unit || '', qty: i.qty, price: i.gift ? 0 : i.price, total: i.gross != null ? i.gross : i.total, disc: i.disc || 0 }; });
   const fInv = d.type === 'buy' ? (d.freightMode !== 'acct') : false;
   return { type: d.type, no: d.no, ts: d.ts, party: { name: party.name || '', mobile: party.mobile || '', address: party.address || '' }, items,
     qty: sum(d.items, i => i.qty), gross: d.gross != null ? d.gross : d.sub, disc: d.disc || 0, discMode: d.discMode || '', discVal: d.discVal || 0, sub: d.sub, tax: d.tax || 0, extra: d.extra || 0, freight: fInv ? (d.freight || 0) : 0, total: d.total,
@@ -1070,6 +1131,11 @@ function repParty(S, o) {
     const eff = sum(S.pent.filter(e => e.ref === d.id && e.partyId === o.partyId), e => e.delta); run += eff;
     rows.push([i + 1, dateS(d.ts), typeFa(d) + (d.no ? ' ' + faS(d.no) : ''), docDesc(S, d), d.payType ? PAY_FA[d.payType] : d.settle ? (d.settle === 'refund' ? 'برگشت وجه' : 'کسر از حساب') : '', d.total, eff, run]);
     tones.push(SIGN[d.type] > 0 ? 'pos' : 'neg');
+    if ((d.type === 'sale' || d.type === 'buy') && d.payType && d.payType !== 'credit') {
+      const ac = S.accounts.find(x => x.id === d.accountId);
+      rows.push(['', dateS(d.ts), (d.type === 'sale' ? 'دریافت وجه بابت فاکتور فروش ' : 'پرداخت وجه بابت فاکتور خرید ') + faS(d.no), ac ? 'حساب: ' + ac.name : '', PAY_FA[d.payType], d.total, 0, run]);
+      tones.push(d.type === 'sale' ? 'pos' : 'neg');
+    }
   });
   const sm = t => sum(ds.filter(d => d.type === t), d => d.total);
   const summary = [{ l: 'مانده‌ی اولیه', v: open, kind: 'bal' }, { l: 'جمع فروش', v: sm('sale'), kind: 'money' }, { l: 'جمع خرید', v: sm('buy'), kind: 'money' }, { l: 'دریافتی', v: sm('receipt'), kind: 'money', tone: 'pos' }, { l: 'پرداختی', v: sm('payment'), kind: 'money', tone: 'neg' }];
@@ -1079,6 +1145,33 @@ function repParty(S, o) {
   return { title: 'صورت‌حساب ' + p.name, subtitle: rangeText(o.from, o.to), cur, party: { name: p.name, mobile: p.mobile || '', address: p.address || '' }, summary,
     sheets: [{ name: 'صورت‌حساب', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'تاریخ', t: 'text', w: 12 }, { h: 'نوع سند', t: 'text', w: 16 }, { h: 'اقلام و توضیحات', t: 'text', w: 50 }, { h: 'تسویه', t: 'text', w: 14 }, { h: 'مبلغ سند (' + cur + ')', t: 'money', w: 18 }, { h: 'اثر روی مانده', t: 'money', w: 18 }, { h: 'مانده پس از سند', t: 'money', w: 18 }], rows, tones }] };
 }
+
+/* ---------- صورت‌حساب و گزارش عملکرد ویزیتور / شریک ---------- */
+function repAgent(S, o, isPartner) {
+  const cur = S.settings.currency, r = { from: o.from, to: o.to }, idk = isPartner ? 'partnerId' : 'visitorId', arr = isPartner ? S.partE : S.visE;
+  const ag = (isPartner ? S.partners : S.visitors).find(x => x.id === o.id) || { name: '' };
+  const all = arr.filter(e => e[idk] === o.id), sm = seqMap(S);
+  const open = sum(all.filter(e => o.from != null && e.ts < o.from), e => e.amount);
+  const es = all.filter(e => inR(e.ts, r)).sort((a, b) => a.ts - b.ts || (sm[a.ref] || 0) - (sm[b.ref] || 0));
+  let run = open; const rows = [], tones = [];
+  const KF = { share: 'سهم از فروش', commission: 'پورسانت فروش', return: 'برگشت (مرجوعی)', payment: 'پرداخت', salary: 'حقوق' };
+  es.forEach((e, i) => {
+    const d = S.docs.find(x => x.id === e.ref); run += e.amount;
+    const sale = d && (d.type === 'sale' || d.type === 'sret') ? d : null;
+    const ac = d && d.accountId ? (S.accounts.find(a => a.id === d.accountId) || {}).name : '';
+    const desc = sale ? 'مشتری: ' + (S.parties.find(p => p.id === sale.partyId) || {}).name + ' • فروش ' + mny(sale.total) + ' • سود ' + mny(sale.profit) : (e.kind === 'payment' ? (ac ? 'از حساب ' + ac : '') + (d && d.note ? ' ' + d.note : '') : (d && d.note) || '');
+    rows.push([i + 1, dateS(e.ts), (KF[e.kind] || e.kind) + (sale && sale.no ? ' ' + faS(sale.no) : ''), desc.trim(), e.amount, run]);
+    tones.push(e.kind === 'payment' ? 'neg' : e.amount < 0 ? 'neg' : 'pos');
+  });
+  const earn = sum(es.filter(e => e.kind !== 'payment'), e => e.amount), paid = -sum(es.filter(e => e.kind === 'payment'), e => e.amount);
+  const sales = es.filter(e => e.kind === 'share' || e.kind === 'commission'), saleDocs = new Set(sales.map(e => e.ref));
+  const summary = [{ l: 'مانده‌ی اولیه', v: open, kind: 'money' }, { l: isPartner ? 'جمع سهم سود' : 'جمع پورسانت و حقوق', v: earn, kind: 'money', tone: 'pos' }, { l: 'جمع پرداختی', v: paid, kind: 'money', tone: 'neg' }];
+  if (saleDocs.size) { const ds = S.docs.filter(d => saleDocs.has(d.id)); summary.push({ l: 'تعداد فاکتور فروش', v: saleDocs.size, kind: 'num' }, { l: 'جمع فروش این فاکتورها', v: sum(ds, d => d.total), kind: 'money' }, { l: 'سود این فاکتورها', v: sum(ds, d => d.profit), kind: 'money' }); }
+  summary.push({ l: 'مانده‌ی نهایی (طلب ' + (isPartner ? 'شریک' : 'ویزیتور') + ')', v: run, kind: 'money', strong: 1 });
+  return { title: 'صورت‌حساب ' + (isPartner ? 'شریک ' : 'ویزیتور ') + ag.name, subtitle: rangeText(o.from, o.to), cur, summary,
+    sheets: [{ name: 'صورت‌حساب', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'تاریخ', t: 'text', w: 12 }, { h: 'شرح', t: 'text', w: 24 }, { h: 'توضیحات', t: 'text', w: 46 }, { h: 'مبلغ (' + cur + ')', t: 'money', w: 18 }, { h: 'مانده (' + cur + ')', t: 'money', w: 18 }], rows, tones }] };
+}
+const repVisitor = (S, o) => repAgent(S, o, false), repPartner = (S, o) => repAgent(S, o, true);
 
 function lastCostAt(S, pid, ts) {
   const bs = S.batches.filter(b => b.pid === pid && (ts == null || b.ts <= ts)).sort(byTs);
@@ -1172,7 +1265,7 @@ function repAccounts(S) {
     sheets: [{ name: 'حساب‌ها', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'حساب', t: 'text', w: 24 }, { h: 'نوع', t: 'text', w: 10 }, { h: 'موجودی اولیه', t: 'money', w: 18 }, { h: 'جمع ورودی', t: 'money', w: 18 }, { h: 'جمع خروجی', t: 'money', w: 18 }, { h: 'موجودی فعلی', t: 'money', w: 18 }], rows, tones: rows.map(r => r[6] < 0 ? 'neg' : '') }] };
 }
 
-const api = { decodeBarcode, barcodeRow, eanBits, eanCheck, addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, addStockMove, addBuyReturn, returnableBuy, repStockMoves, typeFa, SM_FA, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
+const api = { repVisitor, repPartner, churnList, bonusStock, bonusAvail, decodeBarcode, barcodeRow, eanBits, eanCheck, addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, addStockMove, addBuyReturn, returnableBuy, repStockMoves, typeFa, SM_FA, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
   addSale, addBuy, calcDisc, addSaleReturn, returnable, migrate, DEF_PCATS, invoiceData, partyBalBefore, repTxns, repParty, repInventory, repParties, repAccounts, lastCostAt, TYPE_FA, SIGN, PAY_FA, dateS, faS, mny, qtyS, rangeText, deleteDoc, addCashDoc, addMoney, addPartnerPay, addVisitorPay, addVisitorSalary, partyBal, accountBal, partnerBal, visitorBal, summary, partnerApplies };
 
 
@@ -1463,6 +1556,7 @@ const hhmm = ts => { const j = L.jOf(ts); return p2(j.hh) + ':' + p2(j.mm); };
 
 const IC = {
   home: '<path d="M3 11l9-8 9 8"/><path d="M5 9.5V20h14V9.5"/>',
+  gift: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-2-4-6-3-4.5-.5.7 1 4.5.5 4.5.5zM12 8c2-4 6-3 4.5-.5-.7 1-4.5.5-4.5.5z"/>',
   box: '<path d="M3 7h18v4H3z"/><path d="M5 11v9h14v-9"/><path d="M10 15h4"/>',
   bank: '<path d="M3 9l9-5 9 5"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 20h18"/>',
   wallet: '<path d="M4 7h14a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h11"/><circle cx="16" cy="13.5" r="1.2"/>',
@@ -1626,7 +1720,7 @@ function docTitle(d) {
   if (d.type === 'ppay') return t + ' • ' + ((partner(d.partnerId) || {}).name || '');
   return t + ' • ' + ((visitor(d.visitorId) || {}).name || '');
 }
-function docListH(ds, flat) {
+function docListH(ds, flat, withPay) {
   let out = '<div class="list">', last = '';
   for (const d of ds) {
     const day = fday(d.ts);
@@ -1641,6 +1735,10 @@ function docListH(ds, flat) {
     else if (d.note) sub += ' • ' + d.note;
     if (flat) sub = fdate(d.ts) + ' • ' + sub;
     out += rowH({ a: 'doc', id: d.id, title: docTitle(d), sub, icon: t[1], av: t[2], end: endH(mu(d.total), '', t[3] > 0 ? 'pos' : t[3] < 0 ? 'neg' : '') });
+    if (withPay && (d.type === 'sale' || d.type === 'buy') && d.payType && d.payType !== 'credit') {
+      const sale = d.type === 'sale', ac = acct(d.accountId);
+      out += rowH({ a: 'doc', id: d.id, title: (sale ? 'دریافت وجه بابت فاکتور فروش ' : 'پرداخت وجه بابت فاکتور خرید ') + fa(d.no), sub: ftime(d.ts) + ' • ' + PT[d.payType] + (ac ? ' • ' + ac.name : '') + ' • تسویه‌شده', icon: 'wallet', av: sale ? 'green' : 'red', end: endH(mu(d.total), '', sale ? 'pos' : 'neg') });
+    }
   }
   return out + '</div>';
 }
@@ -1885,7 +1983,7 @@ function openAccount(id) {
     p.el.querySelector('h2').textContent = a.name;
     const refs = new Set(S.txns.filter(t => t.accountId === id).map(t => t.ref));
     const ds = applyDocs(S.docs.filter(d => refs.has(d.id)), 'docs'), b = L.accountBal(S, id);
-    p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">موجودی</div><div style="font-size:20px;font-weight:700" class="' + (b < 0 ? 'neg' : '') + '">' + mu(b) + '</div><div class="hint">موجودی اولیه: ' + mu(a.opening) + '</div></div>' + crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('تراکنشی نیست'));
+    p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">موجودی</div><div style="font-size:20px;font-weight:700" class="' + (b < 0 ? 'neg' : '') + '">' + mu(b) + '</div><div class="hint">موجودی اولیه: ' + mu(a.opening) + '</div></div>' + crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs'), true) : empty('تراکنشی نیست'));
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="ac-edit">ویرایش حساب</button><button class="btn ghost tap" data-a="ac-rep">' + ico('file', 18) + 'گزارش</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
@@ -1969,7 +2067,7 @@ function lastSalePrice(pid, partyId) { let ds = S.docs.filter(d => d.type === 's
 function openInvoice(kind, o) {
   o = o || {};
   const edit = o.editId ? S.docs.find(d => d.id === o.editId) : null;
-  const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value })), note: edit.note || '', att: (edit.att || []).slice(), dueTs: edit.dueTs || null }
+  const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, ...(i.gift ? { gift: true, gsrc: i.gsrc } : {}), ...(i.bonus ? { bonus: i.bonus } : {}), partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value })), note: edit.note || '', att: (edit.att || []).slice(), dueTs: edit.dueTs || null }
     : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '', att: [], dueTs: null };
   inv = { kind, editId: o.editId || null, d, no: edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
   cf = d;
@@ -1996,7 +2094,7 @@ function invBody() {
     '<div class="f" style="margin-top:6px"><label>شماره فاکتور</label><div class="pick" style="justify-content:center">' + fa(inv.no) + '</div></div></div>' +
     '<div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="inv-party"><span>' + (pt ? esc(pt.name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     (pt ? '<div class="hint ' + (balText(L.partyBal(S, pt.id)).c) + '">' + (Math.abs(L.partyBal(S, pt.id)) < 1 ? 'تسویه' : balText(L.partyBal(S, pt.id)).t + ': ' + balText(L.partyBal(S, pt.id)).amt) + '</div>' : '') +
-    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><div class="srow" style="margin:8px 0 0"><div class="search">' + ico('search', 20) + '<input id="iqs" data-in="iqs" inputmode="search" placeholder="بارکد (مثلاً ۴ رقم آخر) یا نام محصول" autocomplete="off"></div></div><div class="list" id="iqr"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button><button class="btn ghost tap" data-a="inv-scan" style="margin-top:8px">' + ico('image', 20) + 'اسکن بارکد (افزودن خودکار به لیست)</button></div>' +
+    '<div id="lim"></div><div class="sec"><h3>اقلام</h3><div class="items list" id="items"></div><div class="srow" style="margin:8px 0 0"><div class="search">' + ico('search', 20) + '<input id="iqs" data-in="iqs" inputmode="search" placeholder="بارکد (مثلاً ۴ رقم آخر) یا نام محصول" autocomplete="off"></div></div><div class="list" id="iqr"></div><button class="btn tap" data-a="inv-add" style="margin-top:8px">' + ico('plus', 20) + 'اضافه کردن محصول</button><button class="btn ghost tap" data-a="inv-gift" style="margin-top:8px">' + ico('gift', 20) + (sale ? 'جایزه دادن به مشتری' : 'جایزهٔ دریافتی از تأمین‌کننده (کالای دیگر)') + '</button><button class="btn ghost tap" data-a="inv-scan" style="margin-top:8px">' + ico('image', 20) + 'اسکن بارکد (افزودن خودکار به لیست)</button></div>' +
     '<div class="box sec" id="tot"></div>' +
     discBlock(d) +
     '<button class="chk tap" data-a="inv-tax" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="taxb">' + ico('check', 16) + '</span><span>مالیات بر ارزش افزوده (' + fa(S.settings.taxRate) + '٪)</span></button>' +
@@ -2024,7 +2122,7 @@ function invUpd() {
   const d = inv.d, sale = inv.kind === 'sale';
   const pv = sale ? L.previewSale(S, d) : null;
   let cb = null; if (!sale) { try { cb = L.calcBuy(S, d); } catch (e) { cb = null; } }
-  const raw = d.items.reduce((s, i) => s + Math.round(i.qty * i.price), 0);
+  const raw = d.items.reduce((s, i) => s + (i.gift ? 0 : Math.round(i.qty * i.price)), 0);
   const gross = sale ? (pv && !pv.error ? pv.gross : raw) : (cb ? cb.gross : raw);
   const dc = L.calcDisc(gross, d), disc = dc.error ? 0 : dc.amount, sub = gross - disc;
   const tax = d.taxOn ? Math.round(sub * S.settings.taxRate / 100) : 0;
@@ -2033,7 +2131,11 @@ function invUpd() {
   $('#items').innerHTML = d.items.map((i, n) => {
     const it = sale && pv && !pv.error ? pv.items[n] : null, ci = cb ? cb.out[n] : null;
     const pp = !sale && i.partners && i.partners.length ? '<div class="b2"><span>' + i.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') + '</span></div>' : '';
-    return '<button class="it tap" data-a="inv-edit" data-i="' + n + '"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span>' + mu(Math.round(i.qty * i.price)) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + ' × ' + money(i.price) + '</span>' + (it ? '<span>سود ' + money(it.profit) + '</span>' : (ci && ci.fpu > 0 ? '<span>تمام‌شده ' + money(ci.unitCost) + '</span>' : '')) + '</div>' + pp + '</button>';
+    if (i.gift) {
+      const sub2 = sale ? (i.gsrc === 'bonus' ? 'از جایزه‌های دریافتی' : 'از موجودی انبار') : 'ارزش مرجع ' + money(Math.round(i.qty * i.price)) + ' ' + cur();
+      return '<button class="it tap" data-a="inv-edit" data-i="' + n + '"><div class="a"><span>🎁 ' + esc((prod(i.pid) || {}).name) + '</span><span>جایزه</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + ' • ' + sub2 + '</span>' + (it ? '<span>هزینه ' + money(it.cost) + '</span>' : (ci ? '<span>تمام‌شده ' + money(Math.round(ci.unitCost)) + '</span>' : '')) + '</div></button>';
+    }
+    return '<button class="it tap" data-a="inv-edit" data-i="' + n + '"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span>' + mu(Math.round(i.qty * i.price)) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + ' × ' + money(i.price) + (i.bonus ? ' + ' + qf(i.bonus) + ' جایزه' : '') + '</span>' + (it ? '<span>سود ' + money(it.profit) + '</span>' : (ci && ci.fpu > 0 ? '<span>تمام‌شده ' + money(ci.unitCost) + '</span>' : '')) + '</div>' + pp + '</button>';
   }).join('') || '<div class="hint" style="text-align:center;padding:10px">هنوز محصولی اضافه نشده.</div>';
   { const le = $('#lim'), pt2 = party(d.partyId); let h2 = ''; if (le && sale && pt2 && pt2.limit > 0 && d.payType === 'credit') { const old = inv.editId ? S.pent.filter(e => e.ref === inv.editId && e.partyId === pt2.id).reduce((a, e) => a + e.delta, 0) : 0, after = L.partyBal(S, pt2.id) - old + total; if (after > pt2.limit) h2 = '<div class="warn-note">با این فاکتور بدهی ' + esc(pt2.name) + ' به ' + mu(after) + ' می‌رسد و از سقف اعتبار (' + mu(pt2.limit) + ') بیشتر می‌شود.</div>'; } if (le) le.innerHTML = h2; }
   const tb = $('#taxb').parentNode; tb.classList.toggle('on', d.taxOn); tb.style.background = d.taxOn ? 'var(--accent)' : 'var(--card)'; tb.style.color = d.taxOn ? '#fff' : 'var(--fg)';
@@ -2063,7 +2165,7 @@ A['inv-save'] = () => {
 let it = null; chipH.dummy = () => {};
 A['inv-add'] = () => itemSheet(-1);
 function invAddProd(p) {
-  const sale = inv.kind === 'sale', ex = inv.d.items.find(i => i.pid === p.id);
+  const sale = inv.kind === 'sale', ex = inv.d.items.find(i => i.pid === p.id && !i.gift);
   if (ex) ex.qty = (+ex.qty || 0) + 1;
   else { const price = (sale ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id)) || 0; inv.d.items.push({ pid: p.id, qty: 1, price, partners: [] }); }
   invUpd();
@@ -2088,12 +2190,23 @@ A['inv-scan'] = () => {
   }, { multi: true, onEnd: invAskPrice });
 };
 A['inv-edit'] = t => itemSheet(+t.dataset.i);
-function itemSheet(idx) {
-  const ex = idx >= 0 ? inv.d.items[idx] : null; it = { idx, pid: ex ? ex.pid : '' };
+A['inv-gift'] = () => itemSheet(-1, true);
+chipH.gsrc = v => { it.gsrc = v; itInfo(); };
+function itemSheet(idx, gift) {
+  const ex = idx >= 0 ? inv.d.items[idx] : null; it = { idx, pid: ex ? ex.pid : '', gift: ex ? !!ex.gift : !!gift, gsrc: ex && ex.gift ? (ex.gsrc || 'stock') : 'stock' };
+  const g = it.gift, sale = inv.kind === 'sale';
+  if (g) {
+    const w = openSheet('<h3 class="st">🎁 ' + (sale ? 'جایزه دادن به مشتری' : 'جایزهٔ دریافتی از تأمین‌کننده') + '</h3><div class="f"><label>نام محصول *</label><button class="pick tap" data-a="it-prod"><span id="itn">' + (ex ? esc(prod(ex.pid).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
+      (sale ? '<div class="f"><label>جایزه از کجا کم شود؟</label><div style="padding-top:8px">' + chipsH('gsrc', [['stock', 'موجودی عادی انبار'], ['bonus', 'جایزه‌های دریافتی از تأمین‌کننده']], it.gsrc) + '</div></div>' : '') +
+      field('تعداد *', 'iq', ex ? fa(ex.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') +
+      (sale ? '' : field('قیمت خرید مرجع هر واحد (' + cur() + ') *', 'ip', ex ? fa(grp(ex.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iinfo-m"') + '<div class="hint">این قیمت فقط برای تقسیم هزینهٔ خرید شما بین کالاها استفاده می‌شود و جزو پرداختی نیست.</div>') +
+      '<div class="hint" id="iinfo"></div><div class="pr"><button class="btn tap" data-a="it-ok">' + (ex ? 'ثبت تغییر' : 'افزودن') + '</button>' + (ex ? '<button class="btn danger tap" data-a="it-del">حذف</button>' : '') + '</div>');
+    it.w = w; itInfo(); return;
+  }
   const w = openSheet('<h3 class="st">' + (inv.kind === 'sale' ? 'اضافه کردن محصول برای فروش' : 'اضافه کردن محصول برای خرید') + '</h3><div class="f"><label>نام محصول *</label><button class="pick tap" data-a="it-prod"><span id="itn">' + (ex ? esc(prod(ex.pid).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     '<div class="f"><label for="itbc">بارکد محصول (اختیاری)</label><div style="display:flex;gap:8px"><input id="itbc" inputmode="numeric" value="' + esc(ex ? (prod(ex.pid).barcode || '') : '') + '" autocomplete="off" style="flex:1"><button type="button" class="sbtn tap" data-a="it-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div></div>' +
     field('تعداد *', 'iq', ex ? fa(ex.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + field('قیمت هر واحد (' + cur() + ') *', 'ip', ex ? fa(grp(ex.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iinfo-m"') +
-    (inv.kind === 'buy' ? ppSection(ex) : '') + '<div class="hint" id="iinfo"></div><div class="pr"><button class="btn tap" data-a="it-ok">' + (ex ? 'ثبت تغییر' : 'افزودن') + '</button>' + (ex ? '<button class="btn danger tap" data-a="it-del">حذف</button>' : '') + '</div>');
+    (inv.kind === 'buy' ? field('جایزهٔ همراه همین کالا (تعداد، اختیاری)', 'ibn', ex && ex.bonus ? fa(ex.bonus) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + '<div class="hint">تعداد اضافه‌ای که تأمین‌کننده رایگان داده؛ هزینهٔ پرداختی بین همهٔ واحدها تقسیم می‌شود و قیمت تمام‌شده کمتر می‌شود.</div>' : '') + (inv.kind === 'buy' ? ppSection(ex) : '') + '<div class="hint" id="iinfo"></div><div class="pr"><button class="btn tap" data-a="it-ok">' + (ex ? 'ثبت تغییر' : 'افزودن') + '</button>' + (ex ? '<button class="btn danger tap" data-a="it-del">حذف</button>' : '') + '</div>');
   it.w = w; itInfo();
 }
 I['iinfo-m'] = t => { moneyFmt(t); itInfo(); }; I.iinfo = () => itInfo();
@@ -2102,9 +2215,13 @@ function itInfo() {
   const q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value), st = L.stockOf(S, it.pid), u = unitOf(it.pid);
   let h = 'موجودی انبار: ' + qf(st) + ' ' + u;
   e.className = 'hint';
-  if (inv.kind === 'sale' && q > 0) {
+  if (it.gift && inv.kind === 'sale' && it.gsrc === 'bonus') {
+    const av = L.bonusStock(S, it.pid); h += '<br>جایزه‌های دریافتی موجود: ' + qf(av) + ' ' + u;
+    if (q > av + 1e-9) { h += ' • کافی نیست'; e.className = 'hint bad'; } else h += '<br>هزینهٔ این جایزه صفر ثبت می‌شود و قیمت خرید بقیهٔ موجودی همین کالا اصلاح می‌شود.';
+  } else if (inv.kind === 'sale' && q > 0) {
     const pl = L.planCost(S.batches, it.pid, q, S.settings.costMode);
     if (pl.error) { h += ' • موجودی کافی نیست'; e.className = 'hint bad'; }
+    else if (it.gift) h += '<br>هزینهٔ این جایزه از سود کم می‌شود: ' + mu(pl.cost);
     else h += '<br>قیمت خرید مرجع هر ' + u + ': ' + mu(pl.cost / q) + (pr ? '<br>سود این قلم: <b class="' + (pr * q - pl.cost < 0 ? 'neg' : 'pos') + '">' + mu(Math.round(pr * q) - pl.cost) + '</b>' : '');
   }
   e.innerHTML = h;
@@ -2112,7 +2229,7 @@ function itInfo() {
 A['it-prod'] = () => pickProduct(p => {
   it.pid = p.id; $('#itn', it.w).textContent = p.name; $('#itbc', it.w).value = p.barcode || '';
   const price = inv.kind === 'sale' ? lastSalePrice(p.id, inv.d.partyId) : L.lastBuyPrice(S, p.id);
-  if (price && !num($('#ip', it.w).value)) $('#ip', it.w).value = fa(grp(price));
+  const ipE = $('#ip', it.w); if (price && ipE && !num(ipE.value) && !(it.gift && inv.kind === 'sale')) ipE.value = fa(grp(price));
   itInfo();
 }, inv.kind);
 function ppSection(ex) {
@@ -2125,12 +2242,20 @@ function ppSection(ex) {
   }).join('') + '<div class="hint">هر محصول می‌تواند درصد متفاوتی داشته باشد. موقع فروش، همین درصد روی سود همان محصول اعمال می‌شود.</div></div>';
 }
 A['it-ok'] = () => {
+  if (it.gift) {
+    const q = num($('#iq', it.w).value), pr = inv.kind === 'buy' ? num($('#ip', it.w).value) : 0;
+    if (!it.pid) return toast('محصول را انتخاب کن.', 1); if (!(q > 0)) return toast('تعداد را وارد کن.', 1);
+    if (inv.kind === 'buy' && !(pr > 0)) return toast('قیمت خرید مرجع را وارد کن.', 1);
+    const row = { pid: it.pid, qty: q, price: pr, gift: true, partners: [] }; if (inv.kind === 'sale') row.gsrc = it.gsrc;
+    if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
+    closeSheet(it.w); invUpd(); return;
+  }
   const q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value);
   if (!it.pid) return toast('محصول را انتخاب کن.', 1); if (!(q > 0)) return toast('تعداد را وارد کن.', 1); if (!(pr >= 0) || $('#ip', it.w).value.trim() === '') return toast('قیمت را وارد کن.', 1);
   const pp = []; if (inv.kind === 'buy') S.partners.forEach((p, i) => { const val = num($('#ppv' + i, it.w).value); if (val > 0) pp.push({ partnerId: p.id, mode: $('#ppm' + i, it.w).value, value: val }); });
   const bc = fa(en($('#itbc', it.w).value.trim())), pd = prod(it.pid);
   if (bc && bc !== (pd.barcode || '')) { if (S.products.some(x => x.id !== pd.id && x.barcode && en(x.barcode) === en(bc))) return toast('این بارکد برای محصول دیگری ثبت شده.', 1); pd.barcode = bc; save(); }
-  const row = { pid: it.pid, qty: q, price: pr, partners: pp }; if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
+  const row = { pid: it.pid, qty: q, price: pr, partners: pp }; { const bn = inv.kind === 'buy' ? num($('#ibn', it.w).value) : 0; if (bn > 0) row.bonus = bn; } if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
   closeSheet(it.w); invUpd();
 };
 A['it-scan'] = () => scanBarcode(txt => { const e = $('#itbc', it.w); if (e) e.value = fa(en(txt)); });
@@ -2168,7 +2293,7 @@ function openDoc(id) {
     let h = '<div class="box" style="margin-top:12px"><div class="mrow"><b>' + esc(d.partyId ? (party(d.partyId) || {}).name : d.catId ? (S.cats.find(c => c.id === d.catId) || {}).name : d.partnerId ? (partner(d.partnerId) || {}).name : (visitor(d.visitorId) || {}).name) + '</b><span class="pill">' + fa(fdate(d.ts)) + ' • ' + ftime(d.ts) + '</span></div>' +
       (d.accountId ? '<div class="hint">حساب: ' + esc((acct(d.accountId) || {}).name) + '</div>' : '') + (d.note ? '<div class="hint">' + esc(d.note) + '</div>' : '') + '</div>';
     if (inv_) {
-      h += '<div class="sec"><h3>اقلام</h3><div class="list">' + d.items.map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span>' + mu(i.total) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + ' × ' + money(i.price) + (i.ret ? ' • مرجوع ' + qf(i.ret) : '') + '</span>' + (sale ? '<span>سود ' + money(i.profit) + '</span>' : (i.fpu > 0 ? '<span>تمام‌شده ' + money(i.unitCost) + '</span>' : '')) + '</div>' + (!sale && i.partners && i.partners.length ? '<div class="b2"><span>' + i.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') + '</span></div>' : '') + '</div>').join('') + '</div></div>' +
+      h += '<div class="sec"><h3>اقلام</h3><div class="list">' + d.items.map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + (i.gift ? '🎁 ' : '') + esc((prod(i.pid) || {}).name) + '</span><span>' + (i.gift ? 'جایزه' : mu(i.total)) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + unitOf(i.pid) + (i.gift ? (sale ? (i.gsrc === 'bonus' ? ' • از جایزه‌های دریافتی' : ' • از موجودی انبار') : ' • ارزش مرجع ' + money(i.ref || 0)) : ' × ' + money(i.price) + (i.bonus ? ' + ' + qf(i.bonus) + ' جایزه' : '')) + (i.ret ? ' • مرجوع ' + qf(i.ret) : '') + '</span>' + (sale ? '<span>سود ' + money(i.profit) + '</span>' : (i.fpu > 0 || i.bonus || i.gift ? '<span>تمام‌شده ' + money(Math.round(i.unitCost)) + '</span>' : '')) + '</div>' + (!sale && i.partners && i.partners.length ? '<div class="b2"><span>' + i.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') + '</span></div>' : '') + '</div>').join('') + '</div></div>' +
         '<div class="box sec"><div class="lines"><div class="line"><span>جمع محصولات</span><b>' + mu(d.gross != null ? d.gross : d.sub) + '</b></div>' + (d.disc ? '<div class="line"><span>تخفیف' + (d.discMode === 'percent' ? ' (' + fa(d.discVal) + '٪)' : '') + '</span><b class="neg">−' + mu(d.disc) + '</b></div>' : '') + (d.tax ? '<div class="line"><span>مالیات</span><b>' + mu(d.tax) + '</b></div>' : '') + (d.extra ? '<div class="line"><span>هزینه‌های جانبی</span><b>' + mu(d.extra) + '</b></div>' : '') + (d.freight ? '<div class="line"><span>کرایه بار' + (d.freightMode === 'acct' ? ' <small>(پرداخت جدا)</small>' : '') + '</span><b>' + mu(d.freight) + '</b></div>' : '') + '<div class="line big"><span>جمع فاکتور</span><span>' + mu(d.total) + '</span></div></div></div>' +
         '<div class="' + (d.payType !== 'credit' ? 'ok-note' : 'warn-note') + '">' + (d.payType !== 'credit' ? PT[d.payType] + ' تسویه شده است.' : 'نسیه: روی حساب ' + esc((party(d.partyId) || {}).name) + ' ثبت شده است.') + '</div>';
       if (sale) {
@@ -2230,26 +2355,26 @@ function openPartner(id) {
     const es = S.partE.filter(e => e.partnerId === id).sort((a, b) => b.ts - a.ts), earned = es.filter(e => e.kind !== 'payment').reduce((s, e) => s + e.amount, 0), paid = -es.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0), b = earned - paid;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب شریک</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع سهم سود</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + modeText(pr) + '</div>' +
-      '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'share' ? 'سهم از فروش ' + fa(d ? d.no : '') : e.kind === 'return' ? 'برگشت سهم (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: e.kind === 'share' ? 'tag' : e.kind === 'return' ? 'undo' : 'out', av: e.kind === 'share' ? 'green' : 'amber', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'share' ? 'pos' : 'neg') }); }).join('') || empty('هنوز سهمی ثبت نشده')) + '</div>';
+      agentGallery('partnerId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'share' ? 'سهم از فروش ' + fa(d ? d.no : '') : e.kind === 'return' ? 'برگشت سهم (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: e.kind === 'share' ? 'tag' : e.kind === 'return' ? 'undo' : 'out', av: e.kind === 'share' ? 'green' : 'amber', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'share' ? 'pos' : 'neg') }); }).join('') || empty('هنوز سهمی ثبت نشده')) + '</div>';
   };
-  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pa-pay">ثبت پرداخت به شریک</button><button class="btn ghost tap" data-a="pa-edit">ویرایش</button>' });
+  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pa-pay">ثبت پرداخت به شریک</button><button class="btn ghost tap" data-a="pa-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="pa-edit">ویرایش</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['pa-edit'] = t => partnerSheet(t.closest('.page')._id);
 A['pa-pay'] = t => payForm('partner', t.closest('.page')._id);
 function payForm(kind, id, salary) {
-  cf = { ts: Date.now() };
+  cf = { ts: Date.now() }; ATT.cash = [];
   const name = (kind === 'partner' ? partner(id) : visitor(id)).name, b = kind === 'partner' ? L.partnerBal(S, id) : L.visitorBal(S, id);
-  const w = openSheet('<h3 class="st">' + (salary ? 'ثبت حقوق ' : 'پرداخت به ') + esc(name) + '</h3>' + field('مبلغ (' + cur() + ') *', 'pam', salary ? fa(grp(visitor(id).value)) : (b > 0 ? fa(grp(b)) : ''), { money: 1 }) + (salary ? '' : select('حساب', 'pac', accOpts(), (S.accounts[0] || {}).id)) + dtCells(cf.ts) + field('توضیحات', 'pnt', '') + '<div class="pr"><button class="btn tap" data-a="pay-save">ثبت</button></div>');
+  const w = openSheet('<h3 class="st">' + (salary ? 'ثبت حقوق ' : 'پرداخت به ') + esc(name) + '</h3>' + field('مبلغ (' + cur() + ') *', 'pam', salary ? fa(grp(visitor(id).value)) : (b > 0 ? fa(grp(b)) : ''), { money: 1 }) + (salary ? '' : select('حساب', 'pac', accOpts(), (S.accounts[0] || {}).id)) + dtCells(cf.ts) + field('توضیحات', 'pnt', '') + (salary ? '' : attSec('cash', false, 'تصویر رسید / سند پرداخت')) + '<div class="pr"><button class="btn tap" data-a="pay-save">ثبت</button></div>');
   w._k = kind; w._id = id; w._sal = salary;
 }
 A['pay-save'] = t => {
-  const w = t.closest('.sw'), base = { ledgerId: S.activeLedger, amount: num($('#pam', w).value), ts: cf.ts, note: $('#pnt', w).value.trim() };
+  const w = t.closest('.sw'), base = { ledgerId: S.activeLedger, amount: num($('#pam', w).value), ts: cf.ts, note: $('#pnt', w).value.trim(), att: (ATT.cash || []).slice() };
   let r;
   if (w._sal) r = L.addVisitorSalary(S, { ...base, visitorId: w._id });
   else if (w._k === 'partner') r = L.addPartnerPay(S, { ...base, partnerId: w._id, accountId: $('#pac', w).value });
   else r = L.addVisitorPay(S, { ...base, visitorId: w._id, accountId: $('#pac', w).value });
-  if (done(r, 'ثبت شد')) { closeSheet(w); render(); }
+  if (done(r, 'ثبت شد')) { ATT.cash = []; closeSheet(w); render(); }
 };
 
 /* ---------- ویزیتورها ---------- */
@@ -2283,10 +2408,10 @@ function openVisitor(id) {
     const es = S.visE.filter(e => e.visitorId === id).sort((a, b) => b.ts - a.ts), earned = es.filter(e => e.kind !== 'payment').reduce((s, e) => s + e.amount, 0), paid = -es.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0), b = earned - paid;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب ویزیتور</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع پورسانت و حقوق</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + vText(v) + '</div>' +
-      '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
+      agentGallery('visitorId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
   };
   const v0 = visitor(id), sal = v0.mode === 'monthly' || v0.mode === 'weekly';
-  const p = openPage({ title: '', body: '', foot: (sal ? '<button class="btn ghost tap" data-a="va-sal">ثبت حقوق دوره</button>' : '') + '<button class="btn tap" data-a="va-pay">ثبت پرداخت</button><button class="btn ghost tap" data-a="va-edit">ویرایش</button>' });
+  const p = openPage({ title: '', body: '', foot: (sal ? '<button class="btn ghost tap" data-a="va-sal">ثبت حقوق دوره</button>' : '') + '<button class="btn tap" data-a="va-pay">ثبت پرداخت</button><button class="btn ghost tap" data-a="vi-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="va-edit">ویرایش</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['va-edit'] = t => visitorSheet(t.closest('.page')._id); A['va-pay'] = t => payForm('visitor', t.closest('.page')._id); A['va-sal'] = t => payForm('visitor', t.closest('.page')._id, true);
@@ -2349,6 +2474,12 @@ let sxPage = null;
 const WK = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
 chipH.sf = v => { sx.f = v; sx.sel = -1; sxDraw(); };
 chipH.sb = v => { sx.basis = v; sxDraw(); };
+chipH.chd = v => { S.settings.churnDays = +v; save(); sxDraw(); };
+function churnH() {
+  const days = S.settings.churnDays || 60, list = L.churnList(S, days, Date.now(), S.activeLedger);
+  const rows = list.map(x => { const p = party(x.partyId) || {}, tel = (p.mobile || p.phone || '').trim(); return '<div class="box" style="margin-top:8px;padding:10px 12px"><button class="tap" data-a="party" data-id="' + x.partyId + '" style="all:unset;display:block;width:100%;cursor:pointer"><div class="mrow"><b>' + esc(p.name || '') + '</b><b class="neg">' + fa(x.days) + ' روز</b></div><small class="mut">آخرین خرید: ' + fdate(x.last) + ' • ' + fa(x.count) + ' فاکتور • جمع ' + mu(x.total) + (Math.abs(x.bal) >= 1 ? ' • ' + (x.bal > 0 ? 'بدهکار ' : 'بستانکار ') + mu(Math.abs(x.bal)) : '') + '</small></button>' + (tel ? '<a class="btn ghost tap" href="tel:' + esc(en(tel)) + '" style="margin-top:8px;padding:8px;display:flex;justify-content:center;gap:6px">' + ico('user', 18) + 'تماس: ' + esc(tel) + '</a>' : '<div class="hint">شماره‌ای ثبت نشده؛ از پروندهٔ مشتری شماره را اضافه کن.</div>') + '</div>'; }).join('');
+  return '<div class="box sec"><h3 style="margin:0 0 8px;font-size:14px;color:var(--muted)">مشتریان بدون خرید (برای پیگیری)</h3><div class="mut" style="font-size:12px">مشتریانی که بیشتر از این مدت خرید نکرده‌اند:</div><div style="padding-top:8px">' + chipsH('chd', [['30', '۳۰ روز'], ['60', '۲ ماه'], ['90', '۳ ماه'], ['180', '۶ ماه']], String(days)) + '</div>' + (rows || '<div class="hint" style="text-align:center">مشتری غیرفعالی با این شرط نیست. 👍</div>') + '</div>';
+}
 A['st-pt'] = t => { sx.sel = +t.dataset.i; sxDraw(); };
 function sxRange() {
   const now = Date.now();
@@ -2444,7 +2575,7 @@ function sxDraw() {
   const kp = (l, v, c) => '<div class="cell"><small>' + l + '</small><b class="' + (c || '') + '">' + v + '</b></div>';
   const chips = (n, o, v) => chipsH(n, o, v);
   let h = '<div class="f" style="margin-top:12px"><label>بازه</label><div style="padding-top:8px">' + chips('sf', [['d7', '۷ روز'], ['d30', '۳۰ روز'], ['month', 'ماه جاری'], ['all', 'کل']], sx.f) + '</div></div>';
-  if (!a.count) { sxPage.body.innerHTML = h + empty('در این بازه فروشی ثبت نشده', 'بعد از ثبت چند فاکتور فروش، تحلیل اینجا ساخته می‌شود.'); return; }
+  if (!a.count) { sxPage.body.innerHTML = h + empty('در این بازه فروشی ثبت نشده', 'بعد از ثبت چند فاکتور فروش، تحلیل اینجا ساخته می‌شود.') + churnH(); return; }
   h += '<div class="boxes g2" style="margin-top:12px">' + kp('جمع فروش', mu(a.rev)) + kp('سود کل', mu(a.profit), a.profit < 0 ? 'neg' : 'pos') + kp('حاشیه سود', pct(a.margin) + '٪') + kp('میانگین هر فاکتور', mu(a.avg)) + kp('تعداد فاکتور', fa(a.count)) + kp('مشتری تکراری', fa(a.repeat) + ' از ' + fa(a.customers)) + '</div>';
   const ins = insights(a);
   h += '<div class="box sec"><h3 style="margin:0 0 8px;font-size:14px;color:var(--muted)">نتیجه‌ی تحلیل</h3><ul class="ins">' + ins.map(i => '<li class="' + (i[1] ? 'w' : '') + '">' + i[0] + '</li>').join('') + '</ul></div>';
@@ -2461,6 +2592,7 @@ function sxDraw() {
   const cs = a.byParty.slice().sort((x, y) => y.rev - x.rev).slice(0, 5), mxc = Math.max(1, ...cs.map(x => x.rev));
   h += '<div class="box sec"><h3 style="margin:0 0 8px;font-size:14px;color:var(--muted)">مشتری‌های برتر</h3><div class="rk">' + cs.map(x => '<div class="r1"><b>' + esc((party(x.partyId) || {}).name) + '</b><span>' + mu(x.rev) + '</span><div class="tr"><i style="width:' + Math.max(2, x.rev / mxc * 100) + '%;background:var(--s1)"></i></div><small>' + fa(x.count) + ' فاکتور • سود ' + mu(x.profit) + '</small></div>').join('') + '</div></div>';
   h += '<div class="box sec"><h3 style="margin:0 0 8px;font-size:14px;color:var(--muted)">حاشیه سود هر محصول</h3><table class="tbl"><tr><th>محصول</th><th>حاشیه</th><th>سود</th></tr>' + a.byProduct.slice().sort((x, y) => y.margin - x.margin).map(x => '<tr><td>' + esc((prod(x.pid) || {}).name) + '</td><td>' + pct(x.margin) + '٪</td><td>' + money(x.profit) + '</td></tr>').join('') + '</table></div>';
+  h += churnH();
   sxPage.body.innerHTML = h; sxPage.body.scrollTop = sc;
 }
 function openStats() { sxPage = openPage({ title: 'آمار و سود', body: '' }); sxPage.el._redraw = () => { if (sxPage && sxPage.el.isConnected) sxDraw(); }; sxDraw(); }
@@ -2647,6 +2779,11 @@ function hydrate() { hyT = 0; document.querySelectorAll('img[data-img]:not([data
 new MutationObserver(() => { if (!hyT) hyT = requestAnimationFrame(hydrate); }).observe(document.body, { childList: true, subtree: true });
 function attRefs() { const s = new Set(); S.docs.forEach(d => (d.att || []).forEach(i => s.add(i))); (S.cheques || []).forEach(c => (c.att || []).forEach(i => s.add(i))); return s; }
 function partyAtts(pid) { const o = []; S.docs.filter(d => d.partyId === pid).sort((a, b) => b.ts - a.ts).forEach(d => (d.att || []).forEach(id => o.push({ id, k: 'doc:' + d.id, l: DT[d.type][0] + (d.no ? ' ' + fa(d.no) : '') + ' • ' + fdate(d.ts) }))); (S.cheques || []).filter(c => c.partyId === pid).forEach(c => (c.att || []).forEach(id => o.push({ id, k: 'chk:' + c.id, l: 'چک ' + fa(c.no || '') + ' • ' + fdate(c.due) }))); return o; }
+function agentGallery(key, id) {
+  const o = []; S.docs.filter(d => d[key] === id && (d.att || []).length).sort((a, b) => b.ts - a.ts).forEach(d => d.att.forEach(i => o.push({ i, k: 'doc:' + d.id, l: DT[d.type][0] + ' • ' + fdate(d.ts) })));
+  if (!o.length) return '';
+  return '<div class="box sec"><div class="mrow"><b>پرونده و مدارک پرداخت</b><small class="mut">' + fa(o.length) + ' تصویر</small></div><div class="atts">' + o.map(x => '<button type="button" class="att tap" data-a="att-view" data-k="' + x.k + '" data-id="' + x.i + '" data-ro="1" title="' + esc(x.l) + '"><img data-img="' + x.i + '" alt=""></button>').join('') + '</div></div>';
+}
 function partyGallery(pid) { const a = partyAtts(pid); if (!a.length) return ''; return '<div class="box sec"><div class="mrow"><b>پرونده و مدارک</b><small class="mut">' + fa(a.length) + ' تصویر</small></div><div class="atts">' + a.map(x => '<button type="button" class="att tap" data-a="att-view" data-k="' + x.k + '" data-id="' + x.id + '" data-ro="1" title="' + esc(x.l) + '"><img data-img="' + x.id + '" alt=""></button>').join('') + '</div></div>'; }
 /* پاکسازی تصاویر بی‌صاحب محلی (بیش از یک روز) */
 function imgGC() { idb().then(db => { const refs = attRefs(), t = db.transaction('imgs', 'readwrite'), st = t.objectStore('imgs'), rq = st.openCursor(); rq.onsuccess = () => { const c = rq.result; if (!c) return; const v = c.value; if (!refs.has(v.id) && Date.now() - (v.ts || 0) > 864e5) c.delete(); c.continue(); }; }).catch(() => {}); }
@@ -3369,7 +3506,7 @@ const rv = { kind: '', o: {}, f: 'all', m: null, page: null };
 function rvRange() { const now = Date.now(); if (rv.f === 'today') return { from: L.dayStart(now) }; if (rv.f === 'month') return { from: L.monthStart(now) }; if (rv.f === 'd30') return { from: L.dayStart(now - 29 * 864e5) }; if (rv.f === 'custom' && ui.custom) return { from: ui.custom.from, to: ui.custom.to }; return {}; }
 function rvBuild() {
   const r = rvRange(), o = { ...rv.o, from: r.from, to: r.to };
-  const m = rv.kind === 'txns' ? L.repTxns(S, o) : rv.kind === 'party' ? L.repParty(S, o) : rv.kind === 'inv' ? L.repInventory(S, o) : rv.kind === 'parties' ? L.repParties(S, o) : rv.kind === 'aging' ? L.repAging(S, o) : rv.kind === 'custp' ? L.repCustProfit(S, o) : rv.kind === 'chq' ? L.repCheques(S, o) : rv.kind === 'moves' ? L.repStockMoves(S, o) : L.repAccounts(S);
+  const m = rv.kind === 'txns' ? L.repTxns(S, o) : rv.kind === 'party' ? L.repParty(S, o) : rv.kind === 'visitor' ? L.repVisitor(S, o) : rv.kind === 'partner' ? L.repPartner(S, o) : rv.kind === 'inv' ? L.repInventory(S, o) : rv.kind === 'parties' ? L.repParties(S, o) : rv.kind === 'aging' ? L.repAging(S, o) : rv.kind === 'custp' ? L.repCustProfit(S, o) : rv.kind === 'chq' ? L.repCheques(S, o) : rv.kind === 'moves' ? L.repStockMoves(S, o) : L.repAccounts(S);
   m.biz = [bizName(), prof().phone].filter(Boolean).join(' • '); return m;
 }
 const balStatus = b => Math.abs(b) < 1 ? 'تسویه' : b > 0 ? 'طلبکارم' : 'بدهکارم';
@@ -3411,6 +3548,8 @@ A['rep-ledger'] = () => ui.sub === 'parties' ? openReport('parties', { ledgerId:
 A['rep-inv'] = () => openReport('inv', {});
 A['rep-accts'] = () => openReport('accts', {});
 A['rep-money'] = () => openReport('txns', { types: ['income', 'expense'], title: 'گزارش درآمد و هزینه', sub: '' });
+A['vi-rep'] = t => openReport('visitor', { id: t.closest('.page')._id });
+A['pa-rep'] = t => openReport('partner', { id: t.closest('.page')._id });
 A['pp-rep'] = t => { const id = t.closest('.page')._id; openReport('party', { partyId: id }); };
 A['ac-rep'] = t => { const id = t.closest('.page')._id; openReport('txns', { accountId: id, title: 'صورت حساب ' + (acct(id) || {}).name, sub: '' }); };
 const repChip = a => '<button class="chip tap" data-a="' + a + '">' + ico('file', 15) + ' گزارش اکسل / چاپ</button>';
