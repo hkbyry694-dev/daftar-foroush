@@ -966,10 +966,13 @@ function previewPack(S, d) {
   if (!(n > 0)) return { error: 'تعداد پک را وارد کنید.' };
   if (comps.length < 2) return { error: 'حداقل دو محصول برای پک لازم است.' };
   if (new Set(comps.map(c => c.pid)).size !== comps.length) return { error: 'یک محصول را فقط یک بار انتخاب کنید.' };
-  return packCost(S, comps, n);
+  const pc = packCost(S, comps, n); if (pc.error) return pc;
+  const extras = (d.extras || []).filter(e => +e.amount > 0).map(e => ({ amount: R(+e.amount), note: (e.note || '').trim() })), extra = extras.reduce((a, e) => a + e.amount, 0);
+  return { ...pc, extras, extra, comp: pc.total, total: pc.total + extra, unit: n ? (pc.total + extra) / n : 0 };
 }
-function addPack(S, d) {
+function addPack(S, d, editId) {
   return tx(S, s => {
+    let oldNo = null; if (editId) { const old = deleteDocRaw(s, editId); oldNo = old.no; }
     const pv = previewPack(s, d); if (pv.error) throw new Error(pv.error);
     const n = +d.qty, comps = d.comps.filter(c => c.pid && +c.qty > 0).map(c => ({ pid: c.pid, qty: +c.qty }));
     let pp = d.packPid ? s.products.find(x => x.id === d.packPid) : null;
@@ -981,10 +984,10 @@ function addPack(S, d) {
     }
     if (comps.some(c => c.pid === pp.id)) throw new Error('پک نمی‌تواند خودش را شامل شود.');
     pp.pack = true; pp.comps = comps; if (+d.price > 0) pp.packPrice = +d.price;
-    const id = uid(), seq = nextSeq(s), no = s.settings.nextPack || 1; s.settings.nextPack = no + 1;
+    const id = uid(), seq = nextSeq(s); let no = oldNo; if (no == null) { no = s.settings.nextPack || 1; s.settings.nextPack = no + 1; }
     for (const it of pv.items) for (const c of it.consumed) s.batches.find(b => b.id === c.bid).left -= c.qty;
     s.batches.push({ id: uid(), ref: id, pid: pp.id, ts: d.ts, seq: nextSeq(s), qty: n, left: n, price: pv.unit, base: pv.unit, fpu: 0, partners: [] });
-    const doc = { id, seq, type: 'pack', no, ts: d.ts, ledgerId: d.ledgerId, packPid: pp.id, qty: n, items: pv.items, out: { pid: pp.id, qty: n, price: pv.unit, total: pv.total }, total: pv.total, unit: pv.unit, loss: 0, salePrice: +d.price > 0 ? +d.price : 0, unpacked: 0, note: d.note || '', att: d.att || [] };
+    const doc = { id, seq, type: 'pack', no, ts: d.ts, ledgerId: d.ledgerId, packPid: pp.id, qty: n, items: pv.items, out: { pid: pp.id, qty: n, price: pv.unit, total: pv.total }, total: pv.total, unit: pv.unit, extras: pv.extras, extra: pv.extra, comp: pv.comp, loss: 0, salePrice: +d.price > 0 ? +d.price : 0, unpacked: 0, note: d.note || '', att: d.att || [] };
     s.docs.push(doc); return doc;
   });
 }
@@ -2082,7 +2085,7 @@ function openProduct(id) {
       '<div class="sec"><h3>دسته‌های خرید (مرجع قیمت)</h3><div class="list">' + (bs.map(b => '<div class="row"><span class="tx"><b>' + fa(b.left) + ' از ' + fa(b.qty) + ' ' + pr.unit + '</b><small>' + fdate(b.ts) + (b.fpu > 0 ? ' • شامل کرایه ' + money(b.fpu) : '') + ((b.partners || []).length ? ' • ' + b.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') : '') + '</small></span><span class="end"><b>' + mu(b.price) + '</b><small>هر ' + pr.unit + '</small></span></div>').join('') || empty('هنوز خریدی ثبت نشده')) + '</div></div>' +
       crow('گردش کالا', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('گردشی نیست'));
   };
-  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pr-edit">ویرایش</button><button class="btn ghost tap" data-a="pr-buy">محصول خریدم</button><button class="btn ghost tap" data-a="pr-sm">ورود / خروج / مصرف / ضایعات</button>' });
+  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pr-edit">ویرایش</button>' + (prod(id).pack ? '<button class="btn ghost tap" data-a="pr-pack">ویرایش / باز کردن / حذف پک</button>' : '') + '<button class="btn ghost tap" data-a="pr-buy">محصول خریدم</button><button class="btn ghost tap" data-a="pr-sm">ورود / خروج / مصرف / ضایعات</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['pr-edit'] = t => prodSheet(t.closest('.page')._id); A['pr-buy'] = () => openInvoice('buy');
@@ -2471,7 +2474,7 @@ function openDoc(id) {
     p.body.innerHTML = h + attSec('doc:' + id);
   };
   const d0 = S.docs.find(x => x.id === id), edit = d0.type === 'sale' || d0.type === 'buy';
-  const p = openPage({ title: '', cls: d0.type === 'sale' ? 'sale' : d0.type === 'buy' ? 'buy' : '', body: '', foot: (d0.type === 'sale' || d0.type === 'buy' || d0.type === 'sret' || d0.type === 'bret' ? '<button class="btn ghost tap" data-a="d-inv">' + ico('file', 18) + (d0.type === 'sret' || d0.type === 'bret' ? 'رسید' : 'فاکتور') + '</button>' : '') + (edit ? '<button class="btn ghost tap" data-a="d-ret">' + ico('undo', 18) + 'مرجوعی</button>' : '') + (edit ? '<button class="btn tap" data-a="d-edit">ویرایش</button>' : '') + (d0.type === 'pack' ? '<button class="btn tap" data-a="d-unpack">باز کردن پک</button>' : '') + '<button class="btn danger tap" data-a="d-del">حذف</button>' });
+  const p = openPage({ title: '', cls: d0.type === 'sale' ? 'sale' : d0.type === 'buy' ? 'buy' : '', body: '', foot: (d0.type === 'sale' || d0.type === 'buy' || d0.type === 'sret' || d0.type === 'bret' ? '<button class="btn ghost tap" data-a="d-inv">' + ico('file', 18) + (d0.type === 'sret' || d0.type === 'bret' ? 'رسید' : 'فاکتور') + '</button>' : '') + (edit ? '<button class="btn ghost tap" data-a="d-ret">' + ico('undo', 18) + 'مرجوعی</button>' : '') + (edit ? '<button class="btn tap" data-a="d-edit">ویرایش</button>' : '') + (d0.type === 'pack' ? '<button class="btn tap" data-a="d-pedit">ویرایش</button><button class="btn ghost tap" data-a="d-unpack">باز کردن پک</button>' : '') + '<button class="btn danger tap" data-a="d-del">حذف</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['d-ret'] = t => { const id = t.closest('.page')._id, d = S.docs.find(x => x.id === id); if (!d) return; const ok = d.type === 'buy' ? L.returnableBuy(S, id).some(i => i.left > 1e-9) : L.returnable(S, id).length; if (!ok) return toast(d.type === 'buy' ? 'چیزی برای مرجوعی نمانده (مرجوع شده یا فروخته/مصرف شده است).' : 'چیزی برای مرجوعی نمانده.', 1); openReturnForm(id); };
@@ -2519,7 +2522,7 @@ function openPartner(id) {
     const es = S.partE.filter(e => e.partnerId === id).sort((a, b) => b.ts - a.ts), earned = es.filter(e => e.kind !== 'payment').reduce((s, e) => s + e.amount, 0), paid = -es.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0), b = earned - paid;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب شریک</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع سهم سود</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + modeText(pr) + '</div>' +
-      '<div class="sec"><div class="mrow"><h3 style="margin:0">سود هر محصول</h3><button class="pill tap" data-a="pr-list">تعیین / ویرایش</button></div>' + ((pr.rates || []).length ? '<div class="list">' + pr.rates.map(r => rowH({ a: 'pr-edit', id: r.pid, title: (prod(r.pid) || {}).name || '', sub: shareText(r), icon: 'box' })).join('') + '</div>' : '<div class="hint">برای محصولی که سود جدا دارد، مقدار را اینجا تعیین کن؛ موقع فروش خودکار پیشنهاد می‌شود.</div>') + '</div>' +
+      '<div class="sec"><div class="mrow"><h3 style="margin:0">سود هر محصول</h3><button class="pill tap" data-a="prt-list">تعیین / ویرایش</button></div>' + ((pr.rates || []).length ? '<div class="list">' + pr.rates.map(r => rowH({ a: 'prt-edit', id: r.pid, title: (prod(r.pid) || {}).name || '', sub: shareText(r), icon: 'box' })).join('') + '</div>' : '<div class="hint">برای محصولی که سود جدا دارد، مقدار را اینجا تعیین کن؛ موقع فروش خودکار پیشنهاد می‌شود.</div>') + '</div>' +
       agentGallery('partnerId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'share' ? 'سهم از فروش ' + fa(d ? d.no : '') : e.kind === 'return' ? 'برگشت سهم (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: e.kind === 'share' ? 'tag' : e.kind === 'return' ? 'undo' : 'out', av: e.kind === 'share' ? 'green' : 'amber', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'share' ? 'pos' : 'neg') }); }).join('') || empty('هنوز سهمی ثبت نشده')) + '</div>';
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pa-pay">ثبت پرداخت به شریک</button><button class="btn ghost tap" data-a="pa-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="pa-edit">ویرایش</button>' });
@@ -2527,20 +2530,20 @@ function openPartner(id) {
 }
 A['pa-edit'] = t => partnerSheet(t.closest('.page')._id);
 let rg = null;
-A['pr-list'] = t => {
+A['prt-list'] = t => {
   const pid = t.closest('.page')._id, pr = partner(pid); rg = { pid };
   openSheet('<h3 class="st">سود هر محصول برای ' + esc(pr.name) + '</h3><div class="hint">محصول را انتخاب کن و سودش را وارد کن.</div><div class="search" style="margin:8px 0">' + ico('search', 20) + '<input data-in="prq" placeholder="جستجوی محصول" autocomplete="off"></div><div class="list" id="prl">' + prListH(pid, '') + '</div>');
 };
 I.prq = t => { const e = $('#prl'); if (e) e.innerHTML = prListH(rg.pid, t.value.trim()); };
-function prListH(pid, q) { const pr = partner(pid); return S.products.filter(p => !q || prodMatch(p, q)).map(p => { const r = (pr.rates || []).find(x => x.pid === p.id); return rowH({ a: 'pr-edit', id: p.id, title: p.name, sub: r ? shareText(r) : 'بدون سود جدا', icon: 'box', end: endH(r ? '✓' : '') }); }).join('') || '<div class="hint" style="text-align:center">محصولی نیست.</div>'; }
+function prListH(pid, q) { const pr = partner(pid); return S.products.filter(p => !q || prodMatch(p, q)).map(p => { const r = (pr.rates || []).find(x => x.pid === p.id); return rowH({ a: 'prt-edit', id: p.id, title: p.name, sub: r ? shareText(r) : 'بدون سود جدا', icon: 'box', end: endH(r ? '✓' : '') }); }).join('') || '<div class="hint" style="text-align:center">محصولی نیست.</div>'; }
 chipH.rmode = v => { if (rg) rg.mode = v; };
-A['pr-edit'] = t => {
+A['prt-edit'] = t => {
   const pid = t.closest('.sw') && rg ? rg.pid : t.closest('.page')._id, prid = t.dataset.id, pr = partner(pid), r = (pr.rates || []).find(x => x.pid === prid);
   rg = { pid, prid, mode: r ? r.mode : 'percent' };
-  const w = openSheet('<h3 class="st">' + esc((prod(prid) || {}).name) + '</h3><div class="f"><label>نوع سود</label><div style="padding-top:8px">' + chipsH('rmode', RMODES, rg.mode) + '</div></div>' + field('مقدار (درصد یا ' + cur() + ')', 'rv', r ? fa(String(r.value)) : '') + '<div class="pr"><button class="btn tap" data-a="pr-ok">ثبت</button>' + (r ? '<button class="btn danger tap" data-a="pr-del">حذف</button>' : '') + '</div>'); rg.w = w;
+  const w = openSheet('<h3 class="st">' + esc((prod(prid) || {}).name) + '</h3><div class="f"><label>نوع سود</label><div style="padding-top:8px">' + chipsH('rmode', RMODES, rg.mode) + '</div></div>' + field('مقدار (درصد یا ' + cur() + ')', 'rv', r ? fa(String(r.value)) : '') + '<div class="pr"><button class="btn tap" data-a="prt-ok">ثبت</button>' + (r ? '<button class="btn danger tap" data-a="prt-del">حذف</button>' : '') + '</div>'); rg.w = w;
 };
-A['pr-ok'] = () => { const v = num($('#rv', rg.w).value); if (!(v > 0)) return toast('مقدار را وارد کن.', 1); const pr = partner(rg.pid); pr.rates = (pr.rates || []).filter(x => x.pid !== rg.prid).concat([{ pid: rg.prid, mode: rg.mode, value: v }]); save(); closeSheet(rg.w); render(); };
-A['pr-del'] = () => { const pr = partner(rg.pid); pr.rates = (pr.rates || []).filter(x => x.pid !== rg.prid); save(); closeSheet(rg.w); render(); };
+A['prt-ok'] = () => { const v = num($('#rv', rg.w).value); if (!(v > 0)) return toast('مقدار را وارد کن.', 1); const pr = partner(rg.pid); pr.rates = (pr.rates || []).filter(x => x.pid !== rg.prid).concat([{ pid: rg.prid, mode: rg.mode, value: v }]); save(); closeSheet(rg.w); render(); };
+A['prt-del'] = () => { const pr = partner(rg.pid); pr.rates = (pr.rates || []).filter(x => x.pid !== rg.prid); save(); closeSheet(rg.w); render(); };
 A['pa-pay'] = t => payForm('partner', t.closest('.page')._id);
 function payForm(kind, id, salary) {
   cf = { ts: Date.now() }; ATT.cash = [];
@@ -3294,21 +3297,29 @@ function bretDocHtml(d) {
 
 /* ================= ساخت پک (تبدیل چند کالا به یک کالای جدید) ================= */
 let pk = null;
-function openPack() {
-  pk = { ts: Date.now(), name: '', packPid: '', qty: '', price: '', comps: [], note: '' }; cf = pk;
-  const packs = S.products.filter(p => p.pack);
+function packBase(editId) { if (!editId) return S; const c = JSON.parse(JSON.stringify(S)), r = L.deleteDoc(c, editId); return r.error ? { error: r.error } : c; }
+function openPack(editId) {
+  const old = editId ? S.docs.find(x => x.id === editId) : null;
+  if (old) { const b = packBase(editId); if (b.error) return toast(b.error, 1); }
+  pk = { editId: editId || null, ts: old ? old.ts : Date.now(), name: old ? (prod(old.packPid) || {}).name || '' : '', packPid: old ? old.packPid : '', qty: old ? old.qty : '', price: old ? old.salePrice || '' : '', comps: old ? old.items.map(i => ({ pid: i.pid, qty: i.perPack })) : [], extras: old ? (old.extras || []).map(e => ({ ...e })) : [], note: old ? old.note || '' : '' }; cf = pk;
+  const packs = old ? [] : S.products.filter(p => p.pack);
   const body = '<div class="hint" style="margin-top:12px">چند محصول را در یک «پک» ترکیب کن. اجزا از انبار کم می‌شوند و پک با ارزشِ جمع بهای تمام‌شدهٔ اجزا به انبار اضافه می‌شود.</div>' +
     (packs.length ? '<div class="f"><label>پک قبلی (اختیاری)</label><div style="padding-top:8px" class="fchips">' + packs.map(p => '<button type="button" class="chip tap" data-a="pk-old" data-id="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div></div>' : '') +
-    field('نام پک *', 'pkn', '').replace('autocomplete', 'data-in="pkn" autocomplete') +
+    field('نام پک *', 'pkn', pk.name).replace('autocomplete', (old ? 'readonly ' : '') + 'data-in="pkn" autocomplete') +
     '<div class="sec"><h3>محصولات داخل هر پک</h3><div id="pkc"></div><button class="btn ghost tap" data-a="pk-add" style="margin-top:8px">' + ico('plus', 20) + 'افزودن محصول از انبار</button></div>' +
-    field('تعداد پک برای ساخت *', 'pkq', '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="pkq"') +
+    field('تعداد پک برای ساخت *', 'pkq', pk.qty ? fa(pk.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="pkq"') +
+    '<div class="box sec"><b>هزینه‌های جانبی ساخت پک</b><div class="hint">مثلاً کارتن، پلاستیک، دستمزد بسته‌بندی. مبلغ کل را برای همهٔ پک‌های این ساخت بنویس؛ به بهای تمام‌شدهٔ پک اضافه می‌شود.</div><div id="pke"></div><button class="btn ghost tap" data-a="pk-xadd" style="margin-top:8px">' + ico('plus', 20) + 'افزودن هزینه جانبی</button></div>' +
     '<div class="box sec" id="pkt"></div>' +
-    field('قیمت فروش هر پک (' + cur() + ')', 'pkp', '', { money: 1 }).replace('data-in="money"', 'data-in="pkp"') + '<div class="hint" id="pkpf"></div>' +
-    dtCells(pk.ts) + area('توضیحات', 'pkno', '').replace('<textarea', '<textarea data-in="pkno"');
-  pk.page = openPage({ title: 'ساخت پک', cls: 'buy', body, foot: '<button class="btn tap" data-a="pk-save">ساخت پک و ثبت در انبار</button>' });
+    field('قیمت فروش هر پک (' + cur() + ')', 'pkp', pk.price ? fa(grp(pk.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="pkp"') + '<div class="hint" id="pkpf"></div>' +
+    dtCells(pk.ts) + area('توضیحات', 'pkno', pk.note).replace('<textarea', '<textarea data-in="pkno"');
+  pk.page = openPage({ title: old ? 'ویرایش پک' : 'ساخت پک', cls: 'buy', body, foot: '<button class="btn tap" data-a="pk-save">' + (old ? 'ثبت تغییرات پک' : 'ساخت پک و ثبت در انبار') + '</button>' });
   pkDraw(); pkUpd();
 }
-I.pkn = t => { pk.name = t.value; pk.packPid = ''; };
+I.pkn = t => { if (pk.editId) return; pk.name = t.value; pk.packPid = ''; };
+I.pkea = t => { moneyFmt(t); pk.extras[+t.dataset.i].amount = num(t.value); pkUpd(); };
+I.pken = t => { pk.extras[+t.dataset.i].note = t.value; };
+A['pk-xadd'] = () => { pk.extras.push({ amount: 0, note: '' }); pkDraw(); };
+A['pk-xdel'] = t => { pk.extras.splice(+t.dataset.i, 1); pkDraw(); pkUpd(); };
 I.pkq = t => { pk.qty = num(t.value); pkUpd(); };
 I.pkp = t => { moneyFmt(t); pk.price = num(t.value); pkUpd(); };
 I.pkno = t => { pk.note = t.value; };
@@ -3325,20 +3336,21 @@ A['pk-add'] = () => pickProduct(p => {
 A['pk-del'] = t => { pk.comps.splice(+t.dataset.i, 1); pkDraw(); pkUpd(); };
 function pkDraw() {
   const e = $('#pkc', pk.page.el); if (!e) return;
+  const xe = $('#pke', pk.page.el); if (xe) xe.innerHTML = pk.extras.map((x, i) => '<div class="box" style="margin-top:8px;padding:10px 12px"><div class="f" style="margin-top:0"><label for="pkea' + i + '">مبلغ (' + cur() + ')</label><input id="pkea' + i + '" data-in="pkea" data-i="' + i + '" inputmode="decimal" value="' + (x.amount ? esc(fa(grp(x.amount))) : '') + '" autocomplete="off"></div><div class="f" style="margin-top:8px"><label for="pken' + i + '">بابت (توضیحات)</label><input id="pken' + i + '" data-in="pken" data-i="' + i + '" value="' + esc(x.note || '') + '" placeholder="مثلاً کارتن" autocomplete="off"></div><button class="btn danger tap" data-a="pk-xdel" data-i="' + i + '" style="margin-top:6px">حذف</button></div>').join('');
   e.innerHTML = pk.comps.map((c, i) => '<div class="box" style="margin-top:8px;padding:10px 12px"><div class="mrow"><b>' + esc((prod(c.pid) || {}).name) + '</b><small class="mut">موجودی ' + qf(L.stockOf(S, c.pid)) + ' ' + esc(unitOf(c.pid)) + '</small></div><div class="f" style="margin-top:8px"><label for="pkc' + i + '">تعداد در هر پک (' + esc(unitOf(c.pid)) + ')</label><input id="pkc' + i + '" data-in="pkcq" data-i="' + i + '" inputmode="decimal" value="' + esc(fa(String(c.qty))) + '" autocomplete="off"></div><button class="btn danger tap" data-a="pk-del" data-i="' + i + '" style="margin-top:6px">حذف</button></div>').join('') || '<div class="hint" style="text-align:center">هنوز محصولی اضافه نشده (حداقل دو محصول).</div>';
 }
 function pkUpd() {
   const e = $('#pkt', pk.page.el); if (!e) return;
-  const n = pk.qty > 0 ? pk.qty : 1, pv = L.previewPack(S, { qty: n, comps: pk.comps });
+  const n = pk.qty > 0 ? pk.qty : 1, bs = packBase(pk.editId), pv = bs.error ? { error: bs.error } : L.previewPack(bs, { qty: n, comps: pk.comps, extras: pk.extras });
   if (pv.error) { e.innerHTML = '<div class="hint ' + (pk.comps.length >= 2 ? 'bad' : '') + '">' + esc(pv.error) + '</div>'; $('#pkpf', pk.page.el).textContent = ''; return; }
   e.innerHTML = '<div class="lines">' + pv.items.map(i => '<div class="line"><span>' + esc((prod(i.pid) || {}).name) + ' <small>(' + qf(i.perPack) + ' ' + esc(unitOf(i.pid)) + ')</small></span><b>' + mu(R_(i.total / n)) + '</b></div>').join('') +
-    '<div class="line big"><span>بهای تمام‌شدهٔ هر پک</span><span>' + mu(R_(pv.unit)) + '</span></div>' + (pk.qty > 0 ? '<div class="line"><small>ارزش کل ' + fa(pk.qty) + ' پک</small><small>' + mu(R_(pv.total)) + '</small></div>' : '<div class="hint">تعداد پک را وارد کن تا موجودی بررسی شود.</div>') + '</div>';
+    (pv.extra ? '<div class="line"><span>هزینه‌های جانبی <small>(سهم هر پک)</small></span><b>' + mu(R_(pv.extra / n)) + '</b></div>' : '') + '<div class="line big"><span>بهای تمام‌شدهٔ هر پک</span><span>' + mu(R_(pv.unit)) + '</span></div>' + (pk.qty > 0 ? '<div class="line"><small>ارزش کل ' + fa(pk.qty) + ' پک</small><small>' + mu(R_(pv.total)) + '</small></div>' : '<div class="hint">تعداد پک را وارد کن تا موجودی بررسی شود.</div>') + '</div>';
   const pf_ = $('#pkpf', pk.page.el); if (pf_) pf_.innerHTML = pk.price > 0 ? 'سود هر پک: <b class="' + (pk.price - pv.unit < 0 ? 'neg' : 'pos') + '">' + mu(R_(pk.price - pv.unit)) + '</b> (' + fa(Math.round((pk.price - pv.unit) / pk.price * 100)) + '٪ از قیمت فروش)' : 'بر اساس بهای تمام‌شدهٔ بالا قیمت فروش را تعیین کن.';
 }
 const R_ = x => Math.round(x);
 A['pk-save'] = () => {
-  const d = { ledgerId: S.activeLedger, ts: pk.ts, name: pk.name, packPid: pk.packPid, qty: pk.qty, price: pk.price, comps: pk.comps, note: pk.note };
-  const r = L.addPack(S, d);
+  const d = { ledgerId: S.activeLedger, ts: pk.ts, name: pk.name, packPid: pk.packPid, qty: pk.qty, price: pk.price, comps: pk.comps, extras: pk.extras, note: pk.note };
+  const r = L.addPack(S, d, pk.editId);
   if (done(r, 'پک ساخته شد و به انبار اضافه شد')) { const p = pk.page; p.el.remove(); pages.splice(pages.indexOf(p.el), 1); render(); }
 };
 A['go-pack'] = () => openPack(); A['x-pack'] = () => { closeSheet(); openPack(); };
@@ -3347,8 +3359,15 @@ function packDocHtml(d) {
   const un = d.type === 'unpack', pp = prod(d.out.pid) || {};
   return '<div class="box" style="margin-top:12px"><div class="mrow"><b>' + esc(pp.name || '') + '</b><span class="pill">' + fdate(d.ts) + ' • ' + ftime(d.ts) + '</span></div>' + (un ? '<div class="hint">باز کردن ' + qf(d.out.qty) + ' پک از ساخت شمارهٔ ' + fa(d.srcNo) + '</div>' : '<div class="hint">ساخت ' + qf(d.qty) + ' پک' + (d.salePrice ? ' • قیمت فروش ' + money(d.salePrice) + ' ' + cur() : '') + '</div>') + (d.note ? '<div class="hint">' + esc(d.note) + '</div>' : '') + '</div>' +
     '<div class="sec"><h3>' + (un ? 'کالاهای برگشته به انبار' : 'اجزای مصرف‌شده') + '</h3><div class="list">' + d.items.map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + esc((prod(i.pid) || {}).name) + '</span><span>' + mu(i.total) + '</span></div><div class="b2"><span>' + qf(i.qty) + ' ' + esc(unitOf(i.pid)) + '</span></div></div>').join('') + '</div></div>' +
-    '<div class="box sec"><div class="lines"><div class="line big"><span>' + (un ? 'ارزش پک‌های بازشده' : 'بهای تمام‌شدهٔ هر پک') + '</span><span>' + mu(un ? d.total : R_(d.unit)) + '</span></div>' + (un ? '' : '<div class="line"><small>ارزش کل پک‌ها در انبار</small><small>' + mu(d.total) + '</small></div>' + (d.unpacked ? '<div class="line"><small>باز شده</small><small>' + qf(d.unpacked) + ' پک</small></div>' : '')) + '</div></div>';
+    '<div class="box sec"><div class="lines"><div class="line big"><span>' + (un ? 'ارزش پک‌های بازشده' : 'بهای تمام‌شدهٔ هر پک') + '</span><span>' + mu(un ? d.total : R_(d.unit)) + '</span></div>' + (un ? '' : '<div class="line"><small>ارزش کل پک‌ها در انبار</small><small>' + mu(d.total) + '</small></div>' + (d.extra ? '<div class="line"><small>هزینه‌های جانبی' + (d.extras || []).filter(e => e.note).map(e => ' • ' + esc(e.note) + ' ' + money(e.amount)).join('') + '</small><small>' + mu(d.extra) + '</small></div>' : '') + (d.unpacked ? '<div class="line"><small>باز شده</small><small>' + qf(d.unpacked) + ' پک</small></div>' : '')) + '</div></div>';
 }
+A['d-pedit'] = t => { const pg = t.closest('.page'), id = pg._id; pg.remove(); pages.splice(pages.indexOf(pg), 1); openPack(id); };
+A['pr-pack'] = t => {
+  const id = t.closest('.page')._id, ds = S.docs.filter(d => d.type === 'pack' && d.packPid === id).sort((a, b) => b.ts - a.ts);
+  if (!ds.length) return toast('سند ساختی برای این پک پیدا نشد.', 1);
+  if (ds.length === 1) return openDoc(ds[0].id);
+  openSheet('<h3 class="st">کدام ساخت؟</h3><div class="list">' + ds.map(d => rowH({ a: 'doc', id: d.id, title: 'ساخت ' + fa(d.no) + ' • ' + qf(d.qty) + ' پک', sub: fdate(d.ts) + ' • مانده در انبار ' + qf((S.batches.find(b => b.ref === d.id) || { left: 0 }).left), icon: 'box' })).join('') + '</div>');
+};
 A['d-unpack'] = t => {
   const id = t.closest('.page')._id, d = S.docs.find(x => x.id === id), pb = S.batches.find(b => b.ref === id); if (!d || !pb) return;
   if (pb.left <= 0) return toast('پکی در انبار نمانده.', 1);
