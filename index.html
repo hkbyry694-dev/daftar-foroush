@@ -3424,8 +3424,8 @@ async function catPayload() {
     if (!p.vis || !(p.catPrice > 0)) continue;
     docs['products/' + p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, stock: Math.max(0, +L.stockOf(S, p.id).toFixed(4)), cat: p.cat || '', cimg: p.cimg || '' };
   }
-  S.visitors.forEach(v => { docs['visitors/' + vcId(v)] = { name: v.name, code: v.code, vid: v.id }; docs['visitorGate/' + vcId(v)] = { active: !v.disabled, name: v.name }; });
-  docs['config/app'] = { currency: S.settings.currency || 'ریال', allowPriceEdit: !!S.settings.allowPriceEdit };
+  S.visitors.forEach(v => { const es = S.visE.filter(e => e.visitorId === v.id), earned = Math.round(es.filter(e => e.kind !== 'payment').reduce((q, e) => q + e.amount, 0)), paid = Math.round(-es.filter(e => e.kind === 'payment').reduce((q, e) => q + e.amount, 0)); docs['visitors/' + vcId(v)] = { name: v.name, code: v.code, vid: v.id, comm: { earned, paid, rows: es.slice().sort((x, y) => y.ts - x.ts).slice(0, 25).map(e => { const d = S.docs.find(z => z.id === e.ref); return { ts: e.ts, k: e.kind, a: Math.round(e.amount), no: d ? d.no : 0 }; }) } }; docs['visitorGate/' + vcId(v)] = { active: !v.disabled, name: v.name }; });
+  docs['config/app'] = { currency: S.settings.currency || 'ریال', allowPriceEdit: !!S.settings.allowPriceEdit, pf: pfCfg() };
   return docs;
 }
 async function catSync(force) {
@@ -3472,7 +3472,7 @@ function catDraw() {
   const st = !fbCfg() || !sync.user ? '<div class="warn-note">برای انتشار، اول در «همگام‌سازی ابری» وارد حساب شو.</div>' : cat.busy ? '<div class="hint">در حال انتشار…</div>' : cat.err ? '<div class="warn-note">' + esc(cat.err) + '</div>' : sy.catLast ? '<div class="hint">آخرین انتشار: ' + fdate(sy.catLast) + ' ' + ftime(sy.catLast) + '</div>' : '';
   b.innerHTML = '<div class="box" style="margin-top:12px">' + tog('cat-on', 'انتشار کاتالوگ برای ویزیتورها', on) + tog('cat-pe', 'ویزیتور بتواند قیمت را تغییر بدهد', !!S.settings.allowPriceEdit) + st +
     '<div class="hint">قیمت خرید و سود هرگز منتشر نمی‌شود. فقط محصولاتی که «نمایان» و دارای قیمت هستند دیده می‌شوند (' + fa(nShow) + ' محصول). موجودی هر بار که عوض شد خودکار به‌روز می‌شود.</div></div>' +
-    '<div class="srow" style="margin:12px 0 0"><div class="search">' + ico('search', 20) + '<input data-in="ctq" placeholder="جستجوی محصول" value="' + esc(ct.q) + '" autocomplete="off"></div></div>' +
+    '<div class="list" style="margin-top:10px">' + rowH({ a: 'pf-set', title: 'تنظیمات پیش‌فاکتور', sub: 'نام، تلفن، اعتبار و متن پیش‌فاکتور ویزیتورها', icon: 'file', end: ico('left', 18) }) + '</div>' + '<div class="srow" style="margin:12px 0 0"><div class="search">' + ico('search', 20) + '<input data-in="ctq" placeholder="جستجوی محصول" value="' + esc(ct.q) + '" autocomplete="off"></div></div>' +
     '<div style="padding:10px 0 4px">' + chipsH('ctf', [['all', 'همه'], ['vis', 'نمایان'], ['hid', 'مخفی'], ['noimg', 'بدون عکس (' + fa(noImg) + ')']], ct.f) + '</div>' +
     '<div class="boxes g2" style="margin:6px 0"><button class="btn ghost tap" data-a="cat-fill" style="padding:9px">قیمت از آخرین فروش</button><button class="btn ghost tap" data-a="cat-all" style="padding:9px">نمایش همهٔ دارای قیمت</button></div>' +
     '<div class="list" id="ctl"></div>';
@@ -3622,6 +3622,16 @@ A['pre-trash'] = () => { const p = openPage({ title: 'سطل زباله سفار
 A['pre-tview'] = t => { const id = t.dataset.id, o = pre.map[id]; if (!o) return; openSheet('<h3 class="st">سفارش ' + fa(o.no || '') + ' • ' + esc((o.c || {}).name || '') + '</h3><div class="hint">' + (o.items || []).map(i => esc(i.name) + ' × ' + qf(i.qty)).join('، ') + '</div><div class="pr"><button class="btn tap" data-a="pre-rest" data-id="' + id + '">بازگردانی</button><button class="btn danger tap" data-a="pre-perm" data-id="' + id + '">حذف همیشگی</button></div>'); };
 A['pre-rest'] = t => { delete preTrashM()[t.dataset.id]; save(); closeSheet(); toast('بازگردانی شد'); const pg = pages[pages.length - 1]; if (pg && pg._redraw) pg._redraw(); preRefresh(); };
 A['pre-perm'] = t => { const id = t.dataset.id; closeSheet(); ask('برای همیشه حذف شود؟', 'حذف همیشگی', async () => { try { if (sync.user && sync.fb) await sync.fb.fs.deleteDoc(sync.fb.fs.doc(sync.fb.db, 'preorders', id)); delete preTrashM()[id]; delete pre.map[id]; save(); preSave(); toast('حذف شد'); } catch (e) { toast('حذف نشد (اینترنت؟)', 1); } const pg = pages[pages.length - 1]; if (pg && pg._redraw) pg._redraw(); preRefresh(); }, 1); };
+
+/* ---- تنظیمات پیش‌فاکتور (برای اپ ویزیتور) ---- */
+function pfCfg() { const p = (S.settings.pf = S.settings.pf || {}), pr = S.profile || {}; return { name: p.name || pr.name || '', phone: p.phone || pr.phone || '', addr: p.addr || pr.address || '', note: p.note || '', hours: +p.hours > 0 ? +p.hours : 72, label: p.label == null ? 'غیررسمی' : p.label }; }
+A['pf-set'] = () => {
+  const c = pfCfg();
+  openSheet('<h3 class="st">تنظیمات پیش‌فاکتور</h3><div class="hint">این اطلاعات روی پیش‌فاکتوری که ویزیتور به مشتری می‌دهد چاپ می‌شود. خالی بگذاری، از «پروفایل کسب‌وکار» برداشته می‌شود.</div>' +
+    field('نام مجموعه', 'pfn', c.name) + field('تلفن تماس', 'pfp', c.phone, { num: 1 }) + field('آدرس (اختیاری)', 'pfa', c.addr) + field('اعتبار پیش‌فاکتور (ساعت)', 'pfh', fa(c.hours), { num: 1 }) + field('برچسب بالای پیش‌فاکتور', 'pfl', c.label) + area('متن پایین (اختیاری)', 'pft', c.note) +
+    '<div class="pr"><button class="btn tap" data-a="pf-ok">ذخیره</button></div>');
+};
+A['pf-ok'] = () => { const g = id => $('#' + id).value.trim(); S.settings.pf = { name: g('pfn'), phone: g('pfp') ? fa(en(g('pfp'))) : '', addr: g('pfa'), hours: num($('#pfh').value) || 72, label: g('pfl'), note: g('pft') }; save(); closeSheet(); toast('ذخیره شد و برای ویزیتورها منتشر می‌شود'); catDraw(); };
 
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
 Object.assign(IC, {
