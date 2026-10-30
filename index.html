@@ -457,8 +457,12 @@ function monthStart(ts) { const j = jOf(ts); return tsOf(j.y, j.m, 1, 0, 0); }
 /* ---------- وضعیت اولیه (خام) ---------- */
 const DEF_PCATS = ['خوراکی', 'نوشیدنی', 'مواد غذایی', 'برنج', 'قهوه', 'ادویه‌جات', 'خشکبار', 'شکلات', 'بهداشتی', 'سایر'];
 /* سازگاری با داده‌های نسخه‌ی قبل */
+function nextVCode(S) { const n = S.settings.nextVcode || 1; S.settings.nextVcode = n + 1; return '#' + String(n).padStart(5, '0'); }
 function migrate(S) {
   S.settings = S.settings || {};
+  if (!Array.isArray(S.visitors)) S.visitors = [];
+  S.visitors.forEach(v => { if (!v.code) v.code = nextVCode(S); });
+  if (!S.preInv) S.preInv = {};
   if (!S.settings.nextRet) S.settings.nextRet = 1;
   if (!S.settings.nextBret) S.settings.nextBret = 1;
   if (!Array.isArray(S.settings.pcats)) S.settings.pcats = DEF_PCATS.slice();
@@ -1385,7 +1389,7 @@ function repAccounts(S) {
     sheets: [{ name: 'حساب‌ها', cols: [{ h: 'ردیف', t: 'num', w: 6 }, { h: 'حساب', t: 'text', w: 24 }, { h: 'نوع', t: 'text', w: 10 }, { h: 'موجودی اولیه', t: 'money', w: 18 }, { h: 'جمع ورودی', t: 'money', w: 18 }, { h: 'جمع خروجی', t: 'money', w: 18 }, { h: 'موجودی فعلی', t: 'money', w: 18 }], rows, tones: rows.map(r => r[6] < 0 ? 'neg' : '') }] };
 }
 
-const api = { addPack, addUnpack, previewPack, recentPrices, repVisitor, repPartner, churnList, bonusStock, bonusAvail, decodeBarcode, barcodeRow, eanBits, eanCheck, addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, addStockMove, addBuyReturn, returnableBuy, repStockMoves, typeFa, SM_FA, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
+const api = { nextVCode, addPack, addUnpack, previewPack, recentPrices, repVisitor, repPartner, churnList, bonusStock, bonusAvail, decodeBarcode, barcodeRow, eanBits, eanCheck, addCheque, clearCheque, bounceCheque, reopenCheque, deleteCheque, addStocktake, addStockMove, addBuyReturn, returnableBuy, repStockMoves, typeFa, SM_FA, openItems, reminders, repAging, repCustProfit, repCheques, statementText, chunkStr, isEmptyState, syncPlan, analytics, calcBuy, uid, clone, g2j, j2g, jLeap, jMonthLen, JM, JW, jOf, tsOf, dayStart, monthStart, newState, stockOf, stockValue, lastBuyPrice, planCost, previewSale, tx,
   addSale, addBuy, calcDisc, addSaleReturn, returnable, migrate, DEF_PCATS, invoiceData, partyBalBefore, repTxns, repParty, repInventory, repParties, repAccounts, lastCostAt, TYPE_FA, SIGN, PAY_FA, dateS, faS, mny, qtyS, rangeText, deleteDoc, addCashDoc, addMoney, addPartnerPay, addVisitorPay, addVisitorSalary, partyBal, accountBal, partnerBal, visitorBal, summary, partnerApplies };
 
 
@@ -1910,7 +1914,7 @@ function tabMoney() {
 }
 
 function tabMore() {
-  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
   return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' +
     '<div class="hint" style="text-align:center;margin-top:18px">نسخه ۴ • برای استفاده روی چند دستگاه، همگام‌سازی ابری را روشن کن</div></div>';
 }
@@ -2198,7 +2202,8 @@ function openInvoice(kind, o) {
   const edit = o.editId ? S.docs.find(d => d.id === o.editId) : null;
   const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, ...(i.gift ? { gift: true, gsrc: i.gsrc } : {}), ...(i.bonus ? { bonus: i.bonus } : {}), ...(i.bn ? { bn: i.bn, bu: i.bu, bp: i.bp } : {}), partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value, ...(s.rates ? { rates: s.rates.map(r => ({ ...r })) } : {}) })), note: edit.note || '', att: (edit.att || []).slice(), dueTs: edit.dueTs || null }
     : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '', att: [], dueTs: null };
-  inv = { kind, editId: o.editId || null, d, no: edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
+  if (o.pre) { const q = o.pre; d.partyId = q.partyId; d.items = q.items; d.discVal = q.disc || 0; d.extra = q.ship || 0; d.visitorId = q.visitorId || ''; d.note = q.note || ''; if (q.pay === 'credit') { d.payType = 'credit'; d.accountId = ''; } }
+  inv = { kind, preId: o.pre ? o.pre.id : null, editId: o.editId || null, d, no: edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
   cf = d;
   inv.page = openPage({ title: (kind === 'sale' ? 'فروش' : 'خرید') + (edit ? ' (ویرایش)' : ''), cls: kind, body: invBody(), foot: '<button class="btn tap" data-a="inv-save">ثبت</button>' });
   invUpd();
@@ -2286,7 +2291,7 @@ function invUpd() {
 }
 A['inv-rmp'] = t => { inv.d.partners = inv.d.partners.filter(x => x.partnerId !== t.dataset.id); invUpd(); };
 A['inv-save'] = () => {
-  const go_ = () => { const r = (inv.kind === 'sale' ? L.addSale : L.addBuy)(S, inv.d, inv.editId); if (done(r, 'فاکتور ثبت شد')) { const p = inv.page; p.el.remove(); pages.splice(pages.indexOf(p.el), 1); render(); } };
+  const go_ = () => { const r = (inv.kind === 'sale' ? L.addSale : L.addBuy)(S, inv.d, inv.editId); if (done(r, 'فاکتور ثبت شد')) { if (inv.preId && r.value) preInvoiced(inv.preId, r.value); const p = inv.page; p.el.remove(); pages.splice(pages.indexOf(p.el), 1); render(); } };
   if (document.querySelector('#lim .warn-note')) return ask('بدهی مشتری از سقف اعتبار بیشتر می‌شود. با این حال ثبت شود؟', 'ثبت', go_);
   go_();
 };
@@ -2328,7 +2333,7 @@ function priceChipsH(pid, kind, partyId, target, bx) {
 }
 A['pp-set'] = t => { const e = document.getElementById(t.dataset.t) || document.querySelector('[id="' + t.dataset.t + '"]'); if (!e) return; e.value = fa(grp(+t.dataset.v)); e.dispatchEvent(new Event('input', { bubbles: true })); };
 function itemSheet(idx, gift) {
-  const ex = idx >= 0 ? inv.d.items[idx] : null; it = { idx, pid: ex ? ex.pid : '', gift: ex ? !!ex.gift : !!gift, gsrc: ex && ex.gift ? (ex.gsrc || 'stock') : 'stock', ub: !!(ex && ex.bn && !ex.gift) };
+  const ex = idx >= 0 ? inv.d.items[idx] : null; it = { idx, pid: ex ? ex.pid : '', gift: ex ? !!ex.gift : !!gift, gsrc: ex && ex.gift ? (ex.gsrc || 'stock') : 'stock', ub: !!(ex && ex.bn && !ex.gift), bu: ex && ex.bn ? ex.bu : (ex && prod(ex.pid) && prod(ex.pid).u2) || 'کارتن', per: ex && ex.bn ? ex.qty / ex.bn : (ex && prod(ex.pid) && prod(ex.pid).per) || '' };
   const g = it.gift, sale = inv.kind === 'sale';
   if (g) {
     const w = openSheet('<h3 class="st">🎁 ' + (sale ? 'جایزه دادن به مشتری' : 'جایزهٔ دریافتی از تأمین‌کننده') + '</h3><div class="f"><label>نام محصول *</label><button class="pick tap" data-a="it-prod"><span id="itn">' + (ex ? esc(prod(ex.pid).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
@@ -2340,25 +2345,31 @@ function itemSheet(idx, gift) {
   }
   const w = openSheet('<h3 class="st">' + (inv.kind === 'sale' ? 'اضافه کردن محصول برای فروش' : 'اضافه کردن محصول برای خرید') + '</h3><div class="f"><label>نام محصول *</label><button class="pick tap" data-a="it-prod"><span id="itn">' + (ex ? esc(prod(ex.pid).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
     '<div class="f"><label for="itbc">بارکد محصول (اختیاری)</label><div style="display:flex;gap:8px"><input id="itbc" inputmode="numeric" value="' + esc(ex ? (prod(ex.pid).barcode || '') : '') + '" autocomplete="off" style="flex:1"><button type="button" class="sbtn tap" data-a="it-scan" aria-label="اسکن بارکد">' + ico('image', 20) + '</button></div></div>' +
-    '<div id="iub"></div>' + field('تعداد *', 'iq', ex ? fa(ex.bn || ex.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + field('قیمت هر واحد (' + cur() + ') *', 'ip', ex ? fa(grp(ex.bn ? ex.bp : ex.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iinfo-m"') + priceChipsH(ex ? ex.pid : '', inv.kind, inv.d.partyId, 'ip', ex && ex.bn ? boxOf(ex.pid) : null) +
+    '<div id="iub"></div>' + field('تعداد *', 'iq', ex ? fa(ex.bn || ex.qty) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + field('قیمت هر واحد (' + cur() + ') *', 'ip', ex ? fa(grp(ex.bn ? ex.bp : ex.price)) : '', { money: 1 }).replace('data-in="money"', 'data-in="iinfo-m"') + priceChipsH(ex ? ex.pid : '', inv.kind, inv.d.partyId, 'ip', ex && ex.bn ? { u: ex.bu, per: ex.qty / ex.bn } : null) +
     (inv.kind === 'buy' ? field('جایزهٔ همراه همین کالا (تعداد، اختیاری)', 'ibn', ex && ex.bonus ? fa(ex.bonus) : '', { num: 1 }).replace('inputmode="decimal"', 'inputmode="decimal" data-in="iinfo"') + '<div class="hint">تعداد اضافه‌ای که تأمین‌کننده رایگان داده؛ هزینهٔ پرداختی بین همهٔ واحدها تقسیم می‌شود و قیمت تمام‌شده کمتر می‌شود.</div>' : '') + (inv.kind === 'buy' ? ppSection(ex) : '') + '<div class="hint" id="iinfo"></div><div class="pr"><button class="btn tap" data-a="it-ok">' + (ex ? 'ثبت تغییر' : 'افزودن') + '</button>' + (ex ? '<button class="btn danger tap" data-a="it-del">حذف</button>' : '') + '</div>');
   it.w = w; itUnitUpd(); itInfo();
 }
 I['iinfo-m'] = t => { moneyFmt(t); itInfo(); }; I.iinfo = () => itInfo();
-const boxOf = pid => { const p = prod(pid); return p && p.u2 && p.per > 0 ? { u: p.u2, per: p.per } : null; };
-function itVals() { const bx = it.ub ? boxOf(it.pid) : null, q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value); return bx ? { q: q * bx.per, pr: pr / bx.per, bn: q, bp: pr, bx } : { q, pr, bn: 0, bp: 0, bx: null }; }
+const itBx = () => it.ub && it.per > 0 ? { u: it.bu || 'کارتن', per: it.per } : null;
+function itVals() { const bx = itBx(), q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value); return bx ? { q: q * bx.per, pr: pr / bx.per, bn: q, bp: pr, bx } : { q, pr, bn: 0, bp: 0, bx: null }; }
 function itUnitUpd() {
-  const bx = boxOf(it.pid), c = $('#iub', it.w); if (!c) return; if (!bx) it.ub = false;
-  c.innerHTML = bx ? '<div class="f"><label>واحد</label><div style="padding-top:8px">' + chipsH('iunit', [['b', bx.u], ['u', unitOf(it.pid)]], it.ub ? 'b' : 'u') + '</div><div class="hint">هر ' + esc(bx.u) + ' = ' + fa(bx.per) + ' ' + esc(unitOf(it.pid)) + '</div></div>' : '';
+  const c = $('#iub', it.w); if (!c) return;
+  const u = unitOf(it.pid) || 'عدد', bu = it.bu || 'کارتن', bx = itBx();
+  c.innerHTML = it.pid ? '<div class="f"><label>واحد این قلم</label><div style="padding-top:8px">' + chipsH('iunit', [['u', u + 'ی'], ['b', 'کارتنی / بسته‌ای']], it.ub ? 'b' : 'u') + '</div>' +
+    (it.ub ? '<div style="padding-top:8px">' + chipsH('ibu', [['کارتن', 'کارتن'], ['باکس', 'باکس'], ['بسته', 'بسته']].concat(['کارتن', 'باکس', 'بسته'].includes(bu) ? [] : [[bu, bu]]), bu) + '</div><div class="f"><label for="ipr">هر ' + esc(bu) + ' چند ' + esc(u) + ' است؟ *</label><input id="ipr" data-in="iper" inputmode="decimal" value="' + (it.per ? esc(fa(String(it.per))) : '') + '" placeholder="مثلاً ۳۶" autocomplete="off"></div><div class="hint">یک بار که بنویسی برای همین محصول ذخیره می‌شود و در فروش خودکار می‌آید.</div>' : '') + '</div>' : '';
   const lq = $('label[for="iq"]', it.w), lp = $('label[for="ip"]', it.w);
-  if (lq) lq.textContent = it.ub ? 'تعداد ' + bx.u + ' *' : 'تعداد *'; if (lp) lp.textContent = it.ub ? 'قیمت هر ' + bx.u + ' (' + cur() + ') *' : 'قیمت هر واحد (' + cur() + ') *';
-  const pc = $('#ippc', it.w); if (pc) pc.outerHTML = priceChipsH(it.pid, inv.kind, inv.d.partyId, 'ip', it.ub ? bx : null);
+  if (lq) lq.textContent = it.ub ? 'تعداد ' + bu + ' *' : 'تعداد *'; if (lp) lp.textContent = it.ub ? 'قیمت هر ' + bu + ' (' + cur() + ') *' : 'قیمت هر واحد (' + cur() + ') *';
+  const pc = $('#ippc', it.w); if (pc) pc.outerHTML = priceChipsH(it.pid, inv.kind, inv.d.partyId, 'ip', bx);
 }
+I.iper = t => { const old = itBx(); it.per = num(t.value); const nw = itBx(); if (!old && nw) { const pc = $('#ippc', it.w); if (pc) pc.outerHTML = priceChipsH(it.pid, inv.kind, inv.d.partyId, 'ip', nw); } itInfo(); };
+chipH.ibu = v => { it.bu = v; itUnitUpd(); itInfo(); };
 chipH.iunit = v => {
-  const bx = boxOf(it.pid), toB = v === 'b'; if (!bx || toB === !!it.ub) return;
+  const toB = v === 'b'; if (toB === !!it.ub) return;
+  const old = itBx(); it.ub = toB; const nw = itBx();
   const q = num($('#iq', it.w).value), pr = num($('#ip', it.w).value), r4 = x => +x.toFixed(4);
-  if (q) $('#iq', it.w).value = fa(r4(toB ? q / bx.per : q * bx.per)); if (pr) $('#ip', it.w).value = fa(grp(Math.round(toB ? pr * bx.per : pr / bx.per)));
-  it.ub = toB; itUnitUpd(); itInfo();
+  if (toB && it.per > 0) { if (q) $('#iq', it.w).value = fa(r4(q / it.per)); if (pr) $('#ip', it.w).value = fa(grp(Math.round(pr * it.per))); }
+  else if (!toB && old) { if (q) $('#iq', it.w).value = fa(r4(q * old.per)); if (pr) $('#ip', it.w).value = fa(grp(Math.round(pr / old.per))); }
+  itUnitUpd(); itInfo();
 };
 function itInfo() {
   const e = $('#iinfo', it.w); if (!it.pid) { e.textContent = ''; return; }
@@ -2377,7 +2388,7 @@ function itInfo() {
   e.innerHTML = h;
 }
 A['it-prod'] = () => pickProduct(p => {
-  it.pid = p.id; it.ub = false; $('#itn', it.w).textContent = p.name; const bcE = $('#itbc', it.w); if (bcE) bcE.value = p.barcode || ''; itUnitUpd();
+  it.pid = p.id; it.ub = false; it.bu = p.u2 || 'کارتن'; it.per = p.per || ''; $('#itn', it.w).textContent = p.name; const bcE = $('#itbc', it.w); if (bcE) bcE.value = p.barcode || ''; itUnitUpd();
   const price = inv.kind === 'sale' ? (lastSalePrice(p.id, inv.d.partyId) || p.packPrice || 0) : L.lastBuyPrice(S, p.id);
   const ipE = $('#ip', it.w); if (price && ipE && !num(ipE.value) && !(it.gift && inv.kind === 'sale')) ipE.value = fa(grp(price));
   const pc = $('#ippc', it.w); if (pc) pc.outerHTML = priceChipsH(p.id, inv.kind, inv.d.partyId, 'ip');
@@ -2401,12 +2412,13 @@ A['it-ok'] = () => {
     if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
     closeSheet(it.w); invUpd(); return;
   }
+  if (it.ub && !(it.per > 0)) return toast('تعداد در هر ' + (it.bu || 'کارتن') + ' را وارد کن.', 1);
   const V = itVals(), q = V.q, pr = V.pr;
   if (!it.pid) return toast('محصول را انتخاب کن.', 1); if (!(q > 0)) return toast('تعداد را وارد کن.', 1); if (!(pr >= 0) || $('#ip', it.w).value.trim() === '') return toast('قیمت را وارد کن.', 1);
   const pp = []; if (inv.kind === 'buy') S.partners.forEach((p, i) => { const val = num($('#ppv' + i, it.w).value); if (val > 0) pp.push({ partnerId: p.id, mode: $('#ppm' + i, it.w).value, value: val }); });
   const bc = fa(en($('#itbc', it.w).value.trim())), pd = prod(it.pid);
   if (bc && bc !== (pd.barcode || '')) { if (S.products.some(x => x.id !== pd.id && x.barcode && en(x.barcode) === en(bc))) return toast('این بارکد برای محصول دیگری ثبت شده.', 1); pd.barcode = bc; save(); }
-  const row = { pid: it.pid, qty: q, price: pr, partners: pp }; if (V.bx) { row.bn = V.bn; row.bu = V.bx.u; row.bp = V.bp; } { const bn = inv.kind === 'buy' ? num($('#ibn', it.w).value) : 0; if (bn > 0) row.bonus = bn; } if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
+  const row = { pid: it.pid, qty: q, price: pr, partners: pp }; if (V.bx) { row.bn = V.bn; row.bu = V.bx.u; row.bp = V.bp; const pp_ = prod(it.pid); if (pp_ && (pp_.u2 !== V.bx.u || pp_.per !== V.bx.per)) { pp_.u2 = V.bx.u; pp_.per = V.bx.per; save(); } } { const bn = inv.kind === 'buy' ? num($('#ibn', it.w).value) : 0; if (bn > 0) row.bonus = bn; } if (it.idx >= 0) inv.d.items[it.idx] = row; else inv.d.items.push(row);
   closeSheet(it.w); invUpd();
 };
 A['it-scan'] = () => scanBarcode(txt => { const e = $('#itbc', it.w); if (e) e.value = fa(en(txt)); });
@@ -2571,7 +2583,7 @@ function visitorSheet(id) {
 }
 A['v-save'] = () => {
   const name = $('#vn', vg.w).value.trim(), v = num($('#vv', vg.w).value); if (!name) return toast('نام را وارد کن.', 1);
-  if (vg.id) Object.assign(visitor(vg.id), { name, mode: vg.mode, value: v }); else S.visitors.push({ id: L.uid(), name, mode: vg.mode, value: v });
+  if (vg.id) Object.assign(visitor(vg.id), { name, mode: vg.mode, value: v }); else S.visitors.push({ id: L.uid(), name, mode: vg.mode, value: v, code: L.nextVCode(S) });
   save(); closeSheet(vg.w); render();
 };
 A['v-del'] = () => { S.visitors = S.visitors.filter(v => v.id !== vg.id); save(); closeSheet(vg.w); while (pages.length) { pages[pages.length - 1].remove(); pages.pop(); } render(); };
@@ -2591,7 +2603,7 @@ function openVisitor(id) {
     const es = S.visE.filter(e => e.visitorId === id).sort((a, b) => b.ts - a.ts), earned = es.filter(e => e.kind !== 'payment').reduce((s, e) => s + e.amount, 0), paid = -es.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0), b = earned - paid;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب ویزیتور</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع پورسانت و حقوق</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + vText(v) + '</div>' +
-      agentGallery('visitorId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
+      (typeof visLoginBox==='function'?visLoginBox(v):'') + agentGallery('visitorId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
   };
   const v0 = visitor(id), sal = v0.mode === 'monthly' || v0.mode === 'weekly';
   const p = openPage({ title: '', body: '', foot: (sal ? '<button class="btn ghost tap" data-a="va-sal">ثبت حقوق دوره</button>' : '') + '<button class="btn tap" data-a="va-pay">ثبت پرداخت</button><button class="btn ghost tap" data-a="vi-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="va-edit">ویرایش</button>' });
@@ -2960,7 +2972,7 @@ A['att-del'] = t => { const pg = t.closest('.page'), v = pg._v; ask('این تص
 let hyT = 0;
 function hydrate() { hyT = 0; document.querySelectorAll('img[data-img]:not([data-h])').forEach(im => { im.dataset.h = 1; const id = im.dataset.img; imgGet(id).then(d => { if (d) im.src = d; else { im.dataset.h = ''; syFetchImg(id).then(x => { if (x) { im.src = x; im.dataset.h = 1; } }); } }); }); }
 new MutationObserver(() => { if (!hyT) hyT = requestAnimationFrame(hydrate); }).observe(document.body, { childList: true, subtree: true });
-function attRefs() { const s = new Set(); S.docs.forEach(d => (d.att || []).forEach(i => s.add(i))); (S.cheques || []).forEach(c => (c.att || []).forEach(i => s.add(i))); return s; }
+function attRefs() { const s = new Set(); S.docs.forEach(d => (d.att || []).forEach(i => s.add(i))); (S.cheques || []).forEach(c => (c.att || []).forEach(i => s.add(i))); S.products.forEach(p => (p.cimg || []).forEach(i => s.add(i))); return s; }
 function partyAtts(pid) { const o = []; S.docs.filter(d => d.partyId === pid).sort((a, b) => b.ts - a.ts).forEach(d => (d.att || []).forEach(id => o.push({ id, k: 'doc:' + d.id, l: DT[d.type][0] + (d.no ? ' ' + fa(d.no) : '') + ' • ' + fdate(d.ts) }))); (S.cheques || []).filter(c => c.partyId === pid).forEach(c => (c.att || []).forEach(id => o.push({ id, k: 'chk:' + c.id, l: 'چک ' + fa(c.no || '') + ' • ' + fdate(c.due) }))); return o; }
 function agentGallery(key, id) {
   const o = []; S.docs.filter(d => d[key] === id && (d.att || []).length).sort((a, b) => b.ts - a.ts).forEach(d => d.att.forEach(i => o.push({ i, k: 'doc:' + d.id, l: DT[d.type][0] + ' • ' + fdate(d.ts) })));
@@ -3374,6 +3386,219 @@ A['d-unpack'] = t => {
   const w = openSheet('<h3 class="st">باز کردن پک</h3><div class="hint">در انبار ' + qf(pb.left) + ' پک مانده. اجزای هر پک به انبار برمی‌گردند.</div>' + field('تعداد پک برای باز کردن', 'upq', fa(pb.left), { num: 1 }) + '<div class="pr"><button class="btn tap" data-a="up-ok">باز کن</button></div>'); w._id = id;
 };
 A['up-ok'] = t => { const w = t.closest('.sw'), r = L.addUnpack(S, { srcId: w._id, qty: num($('#upq', w).value), ts: Date.now() }); if (done(r, 'پک باز شد و اجزا به انبار برگشتند')) { closeSheet(w); render(); } };
+
+
+/* ================= کاتالوگ ویزیتورها و صندوق پیش‌سفارش‌ها ================= */
+const vcId = v => String(v.code || '').replace('#', '');
+const PRE_ST = { new: 'جدید', confirmed: 'تأیید شد', invoiced: 'فاکتور شد', shipped: 'ارسال شد', cancel: 'لغو' };
+const cat = { busy: false, timer: null, err: '', gates: {}, last: 0 };
+const pre = { map: {}, unsub: null, first: true, f: 'all', v: '' };
+try { pre.map = JSON.parse(localStorage.getItem('hesab-pre')) || {}; } catch (e) { pre.map = {}; }
+const preSave = () => { try { localStorage.setItem('hesab-pre', JSON.stringify(pre.map)); } catch (e) {} };
+const preList = () => Object.values(pre.map).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+const preNew = () => preList().filter(o => o.status === 'new').length;
+
+/* ---- عکس کاتالوگ: کوچک و سبک (حدود ۲۰ تا ۳۰ کیلوبایت) ---- */
+function catImgSmall(file) {
+  return new Promise((res, rej) => {
+    const rd = new FileReader(); rd.onerror = () => rej(rd.error);
+    rd.onload = () => { const im = new Image(); im.onerror = () => rej(new Error('bad')); im.onload = () => {
+      let side = 480, q = 0.7, out = '';
+      for (let i = 0; i < 12; i++) {
+        const c = document.createElement('canvas'); c.width = c.height = side; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, side, side);
+        const k = Math.min(side / im.width, side / im.height), w = im.width * k, h = im.height * k; x.drawImage(im, (side - w) / 2, (side - h) / 2, w, h);
+        out = c.toDataURL('image/jpeg', q); if (out.length * 0.75 <= 30000) break;
+        if (q > 0.42) q -= 0.1; else side = Math.round(side * 0.85);
+      }
+      res(out); }; im.src = rd.result; };
+    rd.readAsDataURL(file);
+  });
+}
+
+/* ---- انتشار در ابر ---- */
+const catHash = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); };
+async function catPayload() {
+  const on = !!S.settings.catOn, docs = {};
+  if (on) for (const p of S.products) {
+    if (!p.vis || !(p.catPrice > 0)) continue;
+    docs['products/' + p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, stock: Math.max(0, +L.stockOf(S, p.id).toFixed(4)), cat: p.cat || '', cimg: p.cimg || '' };
+  }
+  S.visitors.forEach(v => { docs['visitors/' + vcId(v)] = { name: v.name, code: v.code, vid: v.id }; docs['visitorGate/' + vcId(v)] = { active: !v.disabled, name: v.name }; });
+  docs['config/app'] = { currency: S.settings.currency || 'ریال', allowPriceEdit: !!S.settings.allowPriceEdit };
+  return docs;
+}
+async function catSync(force) {
+  if (!sync.user || !sync.fb || cat.busy || sync.halt) return; if (!navigator.onLine) return;
+  cat.busy = true; cat.err = '';
+  try {
+    const { fs, db } = sync.fb, docs = await catPayload(), prev = sy.catH || {}, next = {}, ops = [];
+    for (const k of Object.keys(docs)) {
+      const d = { ...docs[k] }, hs = catHash(d); next[k] = hs; if (!force && prev[k] === hs) continue;
+      if (k.startsWith('products/') && d.cimg) { const img = await imgGet(d.cimg); d.img = img || ''; }
+      delete d.cimg; d.at = Date.now(); ops.push(['set', k, d]);
+    }
+    for (const k of Object.keys(prev)) if (!(k in next)) ops.push(['del', k]);
+    if (ops.length) {
+      if (!sy.catAdmin) { try { const ref = fs.doc(db, 'config', 'admin'), sn = await fs.getDoc(ref); if (!sn.exists()) await fs.setDoc(ref, { uid: sync.user.uid, at: Date.now() }); sy.catAdmin = true; } catch (e) { throw e; } }
+      for (let i = 0; i < ops.length; i += 400) {
+        const b = fs.writeBatch(db);
+        ops.slice(i, i + 400).forEach(o => { const ref = fs.doc(db, ...o[1].split('/')); if (o[0] === 'set') b.set(ref, o[2], { merge: true }); else b.delete(ref); });
+        await b.commit();
+      }
+    }
+    sy.catH = next; sy.catLast = Date.now(); sySave();
+    try { const sn = await fs.getDocs(fs.collection(db, 'visitorGate')); cat.gates = {}; sn.forEach(d => { cat.gates[d.id] = d.data(); }); } catch (e) {}
+  } catch (e) { cat.err = errFa(e); }
+  cat.busy = false; catDraw();
+}
+function catLater() { clearTimeout(cat.timer); cat.timer = setTimeout(() => { if (sync.user) catSync(); }, 3500); }
+const _save2 = save; save = function () { _save2(); if (sync.user || sy.uid) catLater(); };
+if (fbCfg() && sy.uid) setTimeout(() => { if (sync.user) catSync(); }, 7000);
+setInterval(() => { if (sync.user && sync.fb && !pre.unsub) preWatch(); }, 4000);
+
+/* ---- صفحه‌ی کاتالوگ ---- */
+let ct = { q: '', f: 'all', page: null };
+chipH.ctf = v => { ct.f = v; catListDraw(); };
+function openCatalog() {
+  ct.page = openPage({ title: 'کاتالوگ ویزیتورها', body: '<div id="ctb"></div>', foot: '<button class="btn tap" data-a="cat-pub">انتشار همین حالا</button>' });
+  ct.page.el._redraw = () => catDraw(); catDraw();
+}
+A['go-catalog'] = () => openCatalog();
+function catDraw() {
+  const pg = ct.page; if (!pg || !pg.el.isConnected) return; const b = $('#ctb', pg.el); if (!b) return;
+  const on = !!S.settings.catOn, tog = (a, t, v) => '<button class="chk tap' + (v ? ' on' : '') + '" data-a="' + a + '" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card);width:100%"><span class="b">' + ico('check', 16) + '</span><span>' + t + '</span></button>';
+  const nShow = S.products.filter(p => p.vis && p.catPrice > 0).length, noImg = S.products.filter(p => !p.cimg).length;
+  const st = !fbCfg() || !sync.user ? '<div class="warn-note">برای انتشار، اول در «همگام‌سازی ابری» وارد حساب شو.</div>' : cat.busy ? '<div class="hint">در حال انتشار…</div>' : cat.err ? '<div class="warn-note">' + esc(cat.err) + '</div>' : sy.catLast ? '<div class="hint">آخرین انتشار: ' + fdate(sy.catLast) + ' ' + ftime(sy.catLast) + '</div>' : '';
+  b.innerHTML = '<div class="box" style="margin-top:12px">' + tog('cat-on', 'انتشار کاتالوگ برای ویزیتورها', on) + tog('cat-pe', 'ویزیتور بتواند قیمت را تغییر بدهد', !!S.settings.allowPriceEdit) + st +
+    '<div class="hint">قیمت خرید و سود هرگز منتشر نمی‌شود. فقط محصولاتی که «نمایان» و دارای قیمت هستند دیده می‌شوند (' + fa(nShow) + ' محصول). موجودی هر بار که عوض شد خودکار به‌روز می‌شود.</div></div>' +
+    '<div class="srow" style="margin:12px 0 0"><div class="search">' + ico('search', 20) + '<input data-in="ctq" placeholder="جستجوی محصول" value="' + esc(ct.q) + '" autocomplete="off"></div></div>' +
+    '<div style="padding:10px 0 4px">' + chipsH('ctf', [['all', 'همه'], ['vis', 'نمایان'], ['hid', 'مخفی'], ['noimg', 'بدون عکس (' + fa(noImg) + ')']], ct.f) + '</div>' +
+    '<div class="boxes g2" style="margin:6px 0"><button class="btn ghost tap" data-a="cat-fill" style="padding:9px">قیمت از آخرین فروش</button><button class="btn ghost tap" data-a="cat-all" style="padding:9px">نمایش همهٔ دارای قیمت</button></div>' +
+    '<div class="list" id="ctl"></div>';
+  catListDraw();
+}
+I.ctq = t => { ct.q = t.value; catListDraw(); };
+function catListDraw() {
+  const l = $('#ctl'); if (!l) return; const q = ct.q.trim();
+  const ps = S.products.filter(p => (!q || prodMatch(p, q)) && (ct.f === 'all' || (ct.f === 'vis' && p.vis) || (ct.f === 'hid' && !p.vis) || (ct.f === 'noimg' && !p.cimg)));
+  l.innerHTML = ps.map(p => '<button class="row tap" data-a="cat-edit" data-id="' + p.id + '"><span class="av" style="overflow:hidden;padding:0">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : ico('box', 22)) + '</span><span class="tx"><b>' + esc(p.name) + '</b><small>' + (p.catPrice > 0 ? money(p.catPrice) + ' ' + cur() : '<span class="neg">بدون قیمت (منتشر نمی‌شود)</span>') + ' • موجودی ' + qf(L.stockOf(S, p.id)) + ' ' + esc(p.unit || '') + '</small></span><span class="end">' + (p.vis ? '<b class="pos">نمایان</b>' : '<small class="mut">مخفی</small>') + '</span></button>').join('') || '<div class="hint" style="text-align:center">محصولی پیدا نشد.</div>';
+}
+A['cat-on'] = () => { S.settings.catOn = !S.settings.catOn; save(); catDraw(); };
+A['cat-pe'] = () => { S.settings.allowPriceEdit = !S.settings.allowPriceEdit; save(); catDraw(); };
+A['cat-pub'] = () => { if (!sync.user) return toast('اول در همگام‌سازی ابری وارد شو.', 1); catSync(true).then(() => toast(cat.err ? 'انتشار انجام نشد' : 'کاتالوگ منتشر شد', !!cat.err)); };
+A['cat-fill'] = () => { let n = 0; S.products.forEach(p => { if (!(p.catPrice > 0)) { const pr = lastSalePrice(p.id, '') || p.packPrice || 0; if (pr > 0) { p.catPrice = pr; n++; } } }); save(); catDraw(); toast(fa(n) + ' محصول قیمت گرفت'); };
+A['cat-all'] = () => { let n = 0; S.products.forEach(p => { if (p.catPrice > 0 && !p.vis) { p.vis = true; n++; } }); save(); catDraw(); toast(fa(n) + ' محصول نمایان شد'); };
+let ce = null, ceIn = null;
+function ceInput() { if (ceIn) return ceIn; ceIn = document.createElement('input'); ceIn.type = 'file'; ceIn.accept = 'image/*'; ceIn.hidden = true; document.body.appendChild(ceIn);
+  ceIn.addEventListener('change', async () => { const f = ceIn.files && ceIn.files[0]; ceIn.value = ''; if (!f || !ce) return;
+    try { const d = await catImgSmall(f), id = L.uid(); await imgPut(id, d, false); ce.img = id; const pv = $('#cepv', ce.w); if (pv) pv.innerHTML = '<img src="' + d + '" alt="" style="width:100%;height:100%;object-fit:cover">'; toast('عکس آماده شد (' + fa(Math.round(d.length * 0.75 / 1000)) + ' کیلوبایت)'); } catch (e) { toast('این عکس خوانده نشد.', 1); } }); return ceIn; }
+A['cat-edit'] = t => {
+  const p = prod(t.dataset.id); if (!p) return;
+  ce = { id: p.id, img: p.cimg || '', vis: !!p.vis };
+  ce.w = openSheet('<h3 class="st">' + esc(p.name) + '</h3><div style="display:flex;gap:12px;align-items:center"><div id="cepv" style="width:96px;height:96px;border-radius:14px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<span class="mut">بدون عکس</span>') + '</div><div style="flex:1"><button class="btn tap" data-a="ce-pick" style="padding:10px">' + ico('image', 18) + 'انتخاب عکس از گالری</button><button class="btn ghost tap" data-a="ce-rm" style="padding:8px;margin-top:6px">حذف عکس</button></div></div>' +
+    field('قیمت فروش به ویزیتور (' + cur() + ') — هر ' + esc(p.unit || 'واحد') + ' *', 'cep', p.catPrice ? fa(grp(p.catPrice)) : '', { money: 1 }) + (p.u2 && p.per ? '<div class="hint">قیمت هر ' + esc(p.u2) + ' خودکار = قیمت × ' + fa(p.per) + '</div>' : '') +
+    '<button class="chk tap' + (ce.vis ? ' on' : '') + '" data-a="ce-vis" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>برای ویزیتورها نمایان باشد</span></button>' +
+    '<div class="pr"><button class="btn tap" data-a="ce-ok">ثبت</button></div>');
+};
+A['ce-pick'] = () => { const i = ceInput(); i.value = ''; i.click(); };
+A['ce-rm'] = () => { ce.img = ''; const pv = $('#cepv', ce.w); if (pv) pv.innerHTML = '<span class="mut">بدون عکس</span>'; };
+A['ce-vis'] = t => { ce.vis = !ce.vis; t.classList.toggle('on', ce.vis); };
+A['ce-ok'] = () => { const p = prod(ce.id), v = num($('#cep', ce.w).value); if (ce.vis && !(v > 0)) return toast('برای نمایش، قیمت را وارد کن.', 1); p.catPrice = v || 0; p.vis = ce.vis; p.cimg = ce.img || ''; save(); closeSheet(ce.w); catDraw(); };
+
+/* ---- حساب ورود ویزیتور (در صفحه‌ی ویزیتور) ---- */
+function visLoginBox(v) {
+  const g = cat.gates[vcId(v)], st = !g ? 'هنوز منتشر نشده' : g.claimed ? 'فعال شده (رمز ساخته شده)' : 'منتظر ورود اولِ ویزیتور';
+  return '<div class="box sec"><div class="mrow"><b>حساب ورود به اپ سفارش‌گیری</b><span class="pill">' + esc(v.code) + '</span></div><div class="hint">نام کاربری: <b dir="ltr">' + esc(v.code) + '</b> — رمز را خود ویزیتور اولین بار می‌سازد. وضعیت: ' + st + '</div>' +
+    '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="vi-copy" style="padding:9px">کپی کد</button><button class="btn ' + (v.disabled ? '' : 'ghost') + ' tap" data-a="vi-act" style="padding:9px">' + (v.disabled ? 'فعال کردن حساب' : 'غیرفعال کردن') + '</button></div></div>';
+}
+A['vi-copy'] = t => { const v = visitor(t.closest('.page')._id); try { navigator.clipboard.writeText(v.code); toast('کد کپی شد'); } catch (e) { toast(v.code); } };
+A['vi-act'] = t => { const pg = t.closest('.page'), v = visitor(pg._id); v.disabled = !v.disabled; save(); toast(v.disabled ? 'حساب ویزیتور غیرفعال شد' : 'حساب ویزیتور فعال شد'); if (pg._redraw) pg._redraw(); };
+
+/* ---- صندوق پیش‌سفارش‌ها ---- */
+async function preWatch() {
+  if (!sync.user || !sync.fb || pre.unsub) return; const { fs, db } = sync.fb;
+  try {
+    pre.unsub = fs.onSnapshot(fs.collection(db, 'preorders'), snap => {
+      let fresh = 0;
+      snap.docChanges().forEach(ch => { const d = { ...ch.doc.data(), id: ch.doc.id }; if (ch.type === 'removed') delete pre.map[d.id]; else { if (ch.type === 'added' && !pre.first && !pre.map[d.id] && d.status === 'new') fresh++; pre.map[d.id] = d; } });
+      pre.first = false; preSave(); if (fresh) toast('پیش‌سفارش جدید رسید'); preRefresh();
+    }, e => { pre.unsub = null; });
+  } catch (e) { pre.unsub = null; }
+}
+function preRefresh() { render(); if (pre.page && pre.page.el.isConnected) preDraw(); const d = $('#prd'); if (d && d.closest('.page') && d.closest('.page')._redraw) d.closest('.page')._redraw(); }
+async function preUpdate(id, data) {
+  if (!sync.user || !sync.fb) throw new Error('offline'); const { fs, db } = sync.fb;
+  await fs.updateDoc(fs.doc(db, 'preorders', id), data); if (pre.map[id]) Object.assign(pre.map[id], data); preSave();
+}
+function openPreorders() {
+  pre.page = openPage({ title: 'پیش‌سفارش‌ها', body: '<div id="prb"></div>' }); pre.page.el._redraw = () => preDraw(); preDraw();
+  if (sync.user) preWatch();
+}
+A['go-preorders'] = () => openPreorders();
+chipH.prf = v => { pre.f = v; preDraw(); };
+I.prv = t => { pre.v = t.value; preDraw(); };
+function preDraw() {
+  const b = pre.page && $('#prb', pre.page.el); if (!b) return;
+  const all = preList(), vs = [...new Set(all.map(o => o.visitorCode + '|' + o.visitorName))];
+  const rows = all.filter(o => (pre.f === 'all' || o.status === pre.f) && (!pre.v || o.visitorCode === pre.v));
+  const cnt = s => all.filter(o => o.status === s).length;
+  b.innerHTML = (sync.user ? '' : '<div class="warn-note" style="margin-top:12px">برای دریافت سفارش‌ها، در «همگام‌سازی ابری» وارد حساب شو.</div>') +
+    '<div style="padding:12px 0 4px">' + chipsH('prf', [['all', 'همه'], ['new', 'جدید (' + fa(cnt('new')) + ')'], ['confirmed', 'تأیید'], ['invoiced', 'فاکتور شد'], ['shipped', 'ارسال شد'], ['cancel', 'لغو']], pre.f) + '</div>' +
+    (vs.length > 1 ? select('ویزیتور', 'prv', [['', 'همهٔ ویزیتورها']].concat(vs.map(x => [x.split('|')[0], x.split('|')[1] + ' ' + x.split('|')[0]])), pre.v).replace('<select', '<select data-in="prv"') : '') +
+    '<div class="count">' + fa(rows.length) + ' سفارش</div><div class="list">' + (rows.map(o => rowH({ a: 'preo', id: o.id, title: 'سفارش ' + fa(o.no || '') + ' • ' + ((o.c || {}).name || ''), sub: (o.visitorName || '') + ' • ' + fdate(o.ts) + ' ' + ftime(o.ts), icon: o.status === 'new' ? 'bell' : 'tag', av: o.status === 'new' ? 'amber' : o.status === 'cancel' ? 'red' : 'green', end: endH(mu(o.total || 0), PRE_ST[o.status] || o.status, o.status === 'new' ? 'neg' : '') })).join('') || empty('پیش‌سفارشی نیست', 'سفارش‌هایی که ویزیتورها بفرستند اینجا می‌آید.')) + '</div>';
+}
+A.preo = t => openPreorder(t.dataset.id);
+const mapUrl = c => 'https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng;
+function openPreorder(id) {
+  const draw = p => {
+    const o = pre.map[id]; if (!o) return p.close(); const c = o.c || {}, linked = preInvM()[id] && S.docs.find(d => d.id === preInvM()[id]);
+    p.el.querySelector('h2').textContent = 'سفارش ' + fa(o.no || '');
+    p.body.innerHTML = '<span id="prd" hidden></span><div class="box" style="margin-top:12px"><div class="mrow"><b>' + esc(c.name || '') + '</b><span class="pill">' + esc(PRE_ST[o.status] || o.status) + '</span></div>' +
+      '<div class="hint">ویزیتور: <b>' + esc(o.visitorName || '') + '</b> <span dir="ltr">' + esc(o.visitorCode || '') + '</span> • ' + fdate(o.ts) + ' ' + ftime(o.ts) + '</div>' +
+      (c.mobile ? '<div class="mrow" style="margin-top:6px"><span>موبایل</span><a href="tel:' + esc(en(c.mobile)) + '" dir="ltr" style="color:var(--accent)">' + esc(c.mobile) + '</a></div>' : '') +
+      (c.address ? '<div class="hint">آدرس: ' + esc(c.address) + (c.postal ? ' • کدپستی ' + esc(c.postal) : '') + '</div>' : '') +
+      '<div class="boxes g2" style="margin-top:8px">' + (c.lat && c.lng ? '<a class="btn ghost tap" href="' + mapUrl(c) + '" target="_blank" rel="noopener" style="padding:9px;text-align:center">باز کردن روی نقشه</a>' : '') + (c.address ? '<button class="btn ghost tap" data-a="pre-copy" style="padding:9px">کپی آدرس</button>' : '') + '</div></div>' +
+      '<div class="sec"><h3>اقلام</h3><div class="list">' + (o.items || []).map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + esc(i.name) + '</span><span>' + mu(i.total) + '</span></div><div class="b2"><span>' + (i.bn ? qf(i.bn) + ' ' + esc(i.bu || '') + ' × ' + money(i.bp) + ' (' + qf(i.qty) + ' ' + esc(i.unit || '') + ')' : qf(i.qty) + ' ' + esc(i.unit || '') + ' × ' + money(i.price)) + '</span></div></div>').join('') + '</div></div>' +
+      '<div class="box sec"><div class="lines"><div class="line"><span>جمع کالاها</span><b>' + mu(o.gross || 0) + '</b></div>' + (o.disc ? '<div class="line"><span>تخفیف</span><b class="neg">−' + mu(o.disc) + '</b></div>' : '') + (o.ship ? '<div class="line"><span>هزینهٔ حمل</span><b>' + mu(o.ship) + '</b></div>' : '') + '<div class="line big"><span>جمع</span><span>' + mu(o.total || 0) + '</span></div></div></div>' +
+      '<div class="box sec"><div class="mrow"><span>نحوهٔ پرداخت</span><b>' + ({ cash: 'نقد', credit: 'اعتباری', cheque: 'چک' }[o.pay] || esc(o.pay || '')) + '</b></div>' + (o.due ? '<div class="mrow"><span>تاریخ تحویل خواسته‌شده</span><b>' + esc(o.due) + '</b></div>' : '') + (o.note ? '<div class="hint">' + esc(o.note) + '</div>' : '') + '</div>' +
+      (linked ? '<div class="ok-note">فاکتور فروش ' + fa(linked.no) + ' از روی این سفارش ثبت شده.</div>' : '');
+  };
+  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pre-inv">تبدیل به فاکتور</button><button class="btn ghost tap" data-a="pre-st">تغییر وضعیت</button>' });
+  p.el._redraw = () => draw(p); p.el._id = id; draw(p);
+}
+A['pre-copy'] = t => { const o = pre.map[t.closest('.page')._id], c = o.c || {}; try { navigator.clipboard.writeText([c.name, c.address, c.mobile].filter(Boolean).join('\n')); toast('کپی شد'); } catch (e) { toast('کپی ممکن نشد.', 1); } };
+A['pre-st'] = t => {
+  const id = t.closest('.page')._id, o = pre.map[id];
+  const w = openSheet('<h3 class="st">وضعیت سفارش ' + fa(o.no || '') + '</h3><div class="list">' + Object.keys(PRE_ST).map(k => rowH({ a: 'pre-set', id: k, title: PRE_ST[k], icon: 'tag', end: o.status === k ? '✓' : '' })).join('') + '</div>'); w._id = id;
+};
+A['pre-set'] = async t => { const w = t.closest('.sw'), id = w._id, st = t.dataset.id; try { await preUpdate(id, { status: st, at: Date.now() }); closeSheet(w); toast('وضعیت عوض شد'); preRefresh(); } catch (e) { toast('تغییر وضعیت انجام نشد (اینترنت؟).', 1); } };
+const phoneKey = s => en(String(s || '')).replace(/\D/g, '').slice(-10);
+A['pre-inv'] = t => {
+  const id = t.closest('.page')._id, o = pre.map[id]; if (!o) return;
+  const lk = preInvM()[id] && S.docs.find(d => d.id === preInvM()[id]);
+  if (lk) return toast('این سفارش قبلاً فاکتور شده (فاکتور ' + fa(lk.no) + ').', 1);
+  if (o.status === 'invoiced') return ask('وضعیت این سفارش «فاکتور شد» است ولی فاکتوری در این دفتر پیدا نشد. باز هم فاکتور ساخته شود؟', 'ادامه', () => preToInvoice(id, t.closest('.page')));
+  if (o.status === 'cancel') return toast('این سفارش لغو شده است.', 1);
+  preToInvoice(id, t.closest('.page'));
+};
+function preToInvoice(id, pg) {
+  const o = pre.map[id], c = o.c || {};
+  let pt = (c.mobile && S.parties.find(p => p.ledgerId === S.activeLedger && phoneKey(p.mobile) && phoneKey(p.mobile) === phoneKey(c.mobile))) || S.parties.find(p => p.ledgerId === S.activeLedger && p.name === c.name);
+  if (!pt) { pt = { id: L.uid(), ledgerId: S.activeLedger, name: c.name || 'مشتری', mobile: c.mobile ? fa(en(c.mobile)) : '', nid: '', postal: c.postal ? fa(en(c.postal)) : '', address: c.address || '', limit: 0 }; S.parties.push(pt); save(); }
+  const vs = S.visitors.find(v => vcId(v) === String(o.visitorCode || '').replace('#', ''));
+  const miss = [], items = (o.items || []).map(i => { if (!prod(i.pid)) { miss.push(i.name); return null; } const r = { pid: i.pid, qty: +i.qty, price: +i.price, partners: [] }; if (i.bn) { r.bn = +i.bn; r.bu = i.bu; r.bp = +i.bp; } return r; }).filter(Boolean);
+  if (!items.length) return toast('محصولات این سفارش در دفتر پیدا نشد.', 1);
+  if (miss.length) toast('این محصولات پیدا نشد و اضافه نشد: ' + miss.join('، '), 1);
+  if (pg) { pg.remove(); pages.splice(pages.indexOf(pg), 1); }
+  openInvoice('sale', { pre: { id, partyId: pt.id, items, disc: +o.disc || 0, ship: +o.ship || 0, pay: o.pay, visitorId: vs ? vs.id : '', note: ('سفارش ' + fa(o.no || '') + ' از ' + (o.visitorName || '')) + (o.note ? ' • ' + o.note : '') + (o.pay === 'cheque' ? ' • پرداخت با چک' : '') } });
+}
+async function preInvoiced(id, doc) {
+  preInvM()[id] = doc.id; save();
+  try { await preUpdate(id, { status: 'invoiced', invNo: doc.no, at: Date.now() }); } catch (e) { toast('فاکتور ثبت شد؛ وضعیت سفارش بعداً دستی عوض شود.'); }
+  preRefresh();
+}
+function preSub() { const n = preNew(); return n ? fa(n) + ' سفارش جدید' : 'سفارش‌های ثبت‌شده توسط ویزیتورها'; }
+function preInvM() { return S.preInv || (S.preInv = {}); }
 
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
 Object.assign(IC, {
@@ -3879,7 +4104,7 @@ const _render = render;
 render = function () { _render(); pages.slice().forEach(el => { if (el._redraw) el._redraw(); }); };
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-window.__hesab = { get S() { return S; }, set S(v) { S = v; }, render, L };
+window.__hesab = { get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L };
 render();
 
 })();
