@@ -3395,7 +3395,8 @@ const cat = { busy: false, timer: null, err: '', gates: {}, last: 0 };
 const pre = { map: {}, unsub: null, first: true, f: 'all', v: '' };
 try { pre.map = JSON.parse(localStorage.getItem('hesab-pre')) || {}; } catch (e) { pre.map = {}; }
 const preSave = () => { try { localStorage.setItem('hesab-pre', JSON.stringify(pre.map)); } catch (e) {} };
-const preList = () => Object.values(pre.map).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+const preTrashM = () => S.preTrash || (S.preTrash = {});
+const preList = () => Object.values(pre.map).filter(o => !preTrashM()[o.id]).sort((a, b) => (b.ts || 0) - (a.ts || 0));
 const preNew = () => preList().filter(o => o.status === 'new').length;
 
 /* ---- عکس کاتالوگ: کوچک و سبک (حدود ۲۰ تا ۳۰ کیلوبایت) ---- */
@@ -3403,10 +3404,10 @@ function catImgSmall(file) {
   return new Promise((res, rej) => {
     const rd = new FileReader(); rd.onerror = () => rej(rd.error);
     rd.onload = () => { const im = new Image(); im.onerror = () => rej(new Error('bad')); im.onload = () => {
-      let side = 480, q = 0.7, out = '';
+      let side = 600, q = 0.7, out = '';
       for (let i = 0; i < 12; i++) {
-        const c = document.createElement('canvas'); c.width = c.height = side; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, side, side);
-        const k = Math.min(side / im.width, side / im.height), w = im.width * k, h = im.height * k; x.drawImage(im, (side - w) / 2, (side - h) / 2, w, h);
+        const W = Math.round(side * 0.8), c = document.createElement('canvas'); c.width = W; c.height = side; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, side);
+        const k = Math.max(W / im.width, side / im.height), w = im.width * k, h = im.height * k; x.drawImage(im, (W - w) / 2, (side - h) / 2, w, h);
         out = c.toDataURL('image/jpeg', q); if (out.length * 0.75 <= 30000) break;
         if (q > 0.42) q -= 0.1; else side = Math.round(side * 0.85);
       }
@@ -3495,7 +3496,7 @@ function ceInput() { if (ceIn) return ceIn; ceIn = document.createElement('input
 A['cat-edit'] = t => {
   const p = prod(t.dataset.id); if (!p) return;
   ce = { id: p.id, img: p.cimg || '', vis: !!p.vis };
-  ce.w = openSheet('<h3 class="st">' + esc(p.name) + '</h3><div style="display:flex;gap:12px;align-items:center"><div id="cepv" style="width:96px;height:96px;border-radius:14px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<span class="mut">بدون عکس</span>') + '</div><div style="flex:1"><button class="btn tap" data-a="ce-pick" style="padding:10px">' + ico('image', 18) + 'انتخاب عکس از گالری</button><button class="btn ghost tap" data-a="ce-rm" style="padding:8px;margin-top:6px">حذف عکس</button></div></div>' +
+  ce.w = openSheet('<h3 class="st">' + esc(p.name) + '</h3><div style="display:flex;gap:12px;align-items:center"><div id="cepv" style="width:96px;height:120px;border-radius:14px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<span class="mut">بدون عکس</span>') + '</div><div style="flex:1"><button class="btn tap" data-a="ce-pick" style="padding:10px">' + ico('image', 18) + 'انتخاب عکس از گالری</button><button class="btn ghost tap" data-a="ce-rm" style="padding:8px;margin-top:6px">حذف عکس</button></div></div>' +
     field('قیمت فروش به ویزیتور (' + cur() + ') — هر ' + esc(p.unit || 'واحد') + ' *', 'cep', p.catPrice ? fa(grp(p.catPrice)) : '', { money: 1 }) + (p.u2 && p.per ? '<div class="hint">قیمت هر ' + esc(p.u2) + ' خودکار = قیمت × ' + fa(p.per) + '</div>' : '') +
     '<button class="chk tap' + (ce.vis ? ' on' : '') + '" data-a="ce-vis" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>برای ویزیتورها نمایان باشد</span></button>' +
     '<div class="pr"><button class="btn tap" data-a="ce-ok">ثبت</button></div>');
@@ -3545,7 +3546,7 @@ function preDraw() {
   b.innerHTML = (sync.user ? '' : '<div class="warn-note" style="margin-top:12px">برای دریافت سفارش‌ها، در «همگام‌سازی ابری» وارد حساب شو.</div>') +
     '<div style="padding:12px 0 4px">' + chipsH('prf', [['all', 'همه'], ['new', 'جدید (' + fa(cnt('new')) + ')'], ['confirmed', 'تأیید'], ['invoiced', 'فاکتور شد'], ['shipped', 'ارسال شد'], ['cancel', 'لغو']], pre.f) + '</div>' +
     (vs.length > 1 ? select('ویزیتور', 'prv', [['', 'همهٔ ویزیتورها']].concat(vs.map(x => [x.split('|')[0], x.split('|')[1] + ' ' + x.split('|')[0]])), pre.v).replace('<select', '<select data-in="prv"') : '') +
-    '<div class="count">' + fa(rows.length) + ' سفارش</div><div class="list">' + (rows.map(o => rowH({ a: 'preo', id: o.id, title: 'سفارش ' + fa(o.no || '') + ' • ' + ((o.c || {}).name || ''), sub: (o.visitorName || '') + ' • ' + fdate(o.ts) + ' ' + ftime(o.ts), icon: o.status === 'new' ? 'bell' : 'tag', av: o.status === 'new' ? 'amber' : o.status === 'cancel' ? 'red' : 'green', end: endH(mu(o.total || 0), PRE_ST[o.status] || o.status, o.status === 'new' ? 'neg' : '') })).join('') || empty('پیش‌سفارشی نیست', 'سفارش‌هایی که ویزیتورها بفرستند اینجا می‌آید.')) + '</div>';
+    '<div class="count">' + fa(rows.length) + ' سفارش</div><div class="list">' + (rows.map(o => rowH({ a: 'preo', id: o.id, title: 'سفارش ' + fa(o.no || '') + ' • ' + ((o.c || {}).name || ''), sub: (o.visitorName || '') + ' • ' + fdate(o.ts) + ' ' + ftime(o.ts), icon: o.status === 'new' ? 'bell' : 'tag', av: o.status === 'new' ? 'amber' : o.status === 'cancel' ? 'red' : 'green', end: endH(mu(o.total || 0), PRE_ST[o.status] || o.status, o.status === 'new' ? 'neg' : '') })).join('') || empty('پیش‌سفارشی نیست', 'سفارش‌هایی که ویزیتورها بفرستند اینجا می‌آید.')) + '</div><button class="btn ghost tap" style="margin-top:14px" data-a="pre-trash">' + ico('trash', 18) + 'سطل زباله (' + fa(Object.keys(preTrashM()).filter(k => pre.map[k]).length) + ')</button><div class="hint" style="text-align:center">سفارش حذف‌شده ۳۰ روز در سطل می‌ماند.</div>';
 }
 A.preo = t => openPreorder(t.dataset.id);
 const mapUrl = c => 'https://www.google.com/maps/search/?api=1&query=' + c.lat + ',' + c.lng;
@@ -3563,7 +3564,7 @@ function openPreorder(id) {
       '<div class="box sec"><div class="mrow"><span>نحوهٔ پرداخت</span><b>' + ({ cash: 'نقد', credit: 'اعتباری', cheque: 'چک' }[o.pay] || esc(o.pay || '')) + '</b></div>' + (o.due ? '<div class="mrow"><span>تاریخ تحویل خواسته‌شده</span><b>' + esc(o.due) + '</b></div>' : '') + (o.note ? '<div class="hint">' + esc(o.note) + '</div>' : '') + '</div>' +
       (linked ? '<div class="ok-note">فاکتور فروش ' + fa(linked.no) + ' از روی این سفارش ثبت شده.</div>' : '');
   };
-  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pre-inv">تبدیل به فاکتور</button><button class="btn ghost tap" data-a="pre-st">تغییر وضعیت</button>' });
+  const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pre-inv">تبدیل به فاکتور</button><button class="btn ghost tap" data-a="pre-st">تغییر وضعیت</button><button class="btn danger tap" data-a="pre-del">حذف</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
 }
 A['pre-copy'] = t => { const o = pre.map[t.closest('.page')._id], c = o.c || {}; try { navigator.clipboard.writeText([c.name, c.address, c.mobile].filter(Boolean).join('\n')); toast('کپی شد'); } catch (e) { toast('کپی ممکن نشد.', 1); } };
@@ -3599,6 +3600,28 @@ async function preInvoiced(id, doc) {
 }
 function preSub() { const n = preNew(); return n ? fa(n) + ' سفارش جدید' : 'سفارش‌های ثبت‌شده توسط ویزیتورها'; }
 function preInvM() { return S.preInv || (S.preInv = {}); }
+
+/* ---- حذف و سطل زباله‌ی سفارش‌ها (۳۰ روز) ---- */
+const TRASH_MS = 30 * 864e5;
+A['pre-del'] = t => { const pg = t.closest('.page'), id = pg._id; ask('این سفارش حذف شود؟ ۳۰ روز در سطل زباله می‌ماند و قابل بازگردانی است.', 'حذف', () => { preTrashM()[id] = Date.now(); save(); pg.remove(); pages.splice(pages.indexOf(pg), 1); toast('به سطل زباله رفت'); preRefresh(); }, 1); };
+async function preTrashPurge() {
+  const m = preTrashM(), now = Date.now(); let ch = false;
+  for (const id of Object.keys(m)) {
+    if (now - m[id] < TRASH_MS) continue;
+    if (!pre.map[id]) { delete m[id]; ch = true; continue; }
+    if (sync.user && sync.fb && navigator.onLine) { try { await sync.fb.fs.deleteDoc(sync.fb.fs.doc(sync.fb.db, 'preorders', id)); delete m[id]; delete pre.map[id]; ch = true; } catch (e) {} }
+  }
+  if (ch) { save(); preSave(); }
+}
+setTimeout(preTrashPurge, 8000);
+function trashDraw(p) {
+  const m = preTrashM(), ids = Object.keys(m).filter(k => pre.map[k]).sort((a, b) => m[b] - m[a]);
+  p.body.innerHTML = '<div class="hint" style="margin-top:12px">سفارش‌های حذف‌شده ۳۰ روز اینجا می‌مانند. روی هر کدام بزن تا ببینی یا بازگردانی کنی.</div><div class="list" style="margin-top:8px">' + (ids.map(id => { const o = pre.map[id], left = Math.max(0, Math.ceil((TRASH_MS - (Date.now() - m[id])) / 864e5)); return rowH({ a: 'pre-tview', id, title: 'سفارش ' + fa(o.no || '') + ' • ' + ((o.c || {}).name || ''), sub: 'حذف: ' + fdate(m[id]) + ' • ' + fa(left) + ' روز مانده', icon: 'trash', end: endH(mu(o.total || 0), PRE_ST[o.status] || '') }); }).join('') || empty('سطل زباله خالی است')) + '</div>';
+}
+A['pre-trash'] = () => { const p = openPage({ title: 'سطل زباله سفارش‌ها', body: '' }); p.el._redraw = () => trashDraw(p); trashDraw(p); };
+A['pre-tview'] = t => { const id = t.dataset.id, o = pre.map[id]; if (!o) return; openSheet('<h3 class="st">سفارش ' + fa(o.no || '') + ' • ' + esc((o.c || {}).name || '') + '</h3><div class="hint">' + (o.items || []).map(i => esc(i.name) + ' × ' + qf(i.qty)).join('، ') + '</div><div class="pr"><button class="btn tap" data-a="pre-rest" data-id="' + id + '">بازگردانی</button><button class="btn danger tap" data-a="pre-perm" data-id="' + id + '">حذف همیشگی</button></div>'); };
+A['pre-rest'] = t => { delete preTrashM()[t.dataset.id]; save(); closeSheet(); toast('بازگردانی شد'); const pg = pages[pages.length - 1]; if (pg && pg._redraw) pg._redraw(); preRefresh(); };
+A['pre-perm'] = t => { const id = t.dataset.id; closeSheet(); ask('برای همیشه حذف شود؟', 'حذف همیشگی', async () => { try { if (sync.user && sync.fb) await sync.fb.fs.deleteDoc(sync.fb.fs.doc(sync.fb.db, 'preorders', id)); delete preTrashM()[id]; delete pre.map[id]; save(); preSave(); toast('حذف شد'); } catch (e) { toast('حذف نشد (اینترنت؟)', 1); } const pg = pages[pages.length - 1]; if (pg && pg._redraw) pg._redraw(); preRefresh(); }, 1); };
 
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
 Object.assign(IC, {
