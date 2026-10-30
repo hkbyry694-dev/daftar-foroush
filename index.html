@@ -1705,6 +1705,8 @@ const IC = {
   inn: '<path d="M12 4v12M7 11l5 5 5-5M5 20h14"/>',
   out: '<path d="M12 16V4M7 9l5-5 5 5M5 20h14"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+  pin: '<path d="M12 21s7-6.2 7-11a7 7 0 00-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h6a3 3 0 000-6h-4a3 3 0 010-6h6"/>',
   cart: '<path d="M3 4h2l2.5 11h10l2-8H7"/><circle cx="9" cy="19" r="1.4"/><circle cx="17" cy="19" r="1.4"/>',
   cloud: '<path d="M7 18a4.5 4.5 0 01-.6-8.96A6 6 0 0118 9.5 4.3 4.3 0 0117.5 18z"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
@@ -1914,7 +1916,7 @@ function tabMoney() {
 }
 
 function tabMore() {
-  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
   return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' +
     '<div class="hint" style="text-align:center;margin-top:18px">نسخه ۴ • برای استفاده روی چند دستگاه، همگام‌سازی ابری را روشن کن</div></div>';
 }
@@ -3633,6 +3635,131 @@ A['pf-set'] = () => {
 };
 A['pf-ok'] = () => { const g = id => $('#' + id).value.trim(); S.settings.pf = { name: g('pfn'), phone: g('pfp') ? fa(en(g('pfp'))) : '', addr: g('pfa'), hours: num($('#pfh').value) || 72, label: g('pfl'), note: g('pft') }; save(); closeSheet(); toast('ذخیره شد و برای ویزیتورها منتشر می‌شود'); catDraw(); };
 
+/* ===== مسیر ویزیتورها: شهر ← مناطق ← فروشگاه‌ها ← تقسیم بین ویزیتورها ===== */
+const VR_CATS = { market: ['سوپرمارکت و خواربار', { shop: ['supermarket', 'convenience', 'general'] }], cafe: ['کافه و رستوران', { amenity: ['cafe', 'restaurant', 'fast_food'] }], sweet: ['شیرینی، نانوایی و بستنی', { shop: ['bakery', 'confectionery', 'pastry'], amenity: ['ice_cream'] }], juice: ['آبمیوه و نوشیدنی', { amenity: ['juice_bar'], shop: ['beverages'] }], fruit: ['میوه‌فروشی', { shop: ['greengrocer'] }] };
+const VR_TYPE = { supermarket: 'سوپرمارکت', convenience: 'خواربار', general: 'فروشگاه', bakery: 'نانوایی', confectionery: 'شیرینی‌فروشی', pastry: 'شیرینی‌فروشی', beverages: 'نوشیدنی', greengrocer: 'میوه‌فروشی', cafe: 'کافه', restaurant: 'رستوران', fast_food: 'فست‌فود', ice_cream: 'بستنی', juice_bar: 'آبمیوه‌فروشی' };
+const vrS = () => S.rt || (S.rt = { city: null, regions: [], sel: {}, cats: ['market', 'cafe'], radius: 800, max: 40, last: {}, plans: {} });
+const vrUI = { q: '', day: 1, n: 0, plan: null, busy: '', prog: null, page: null };
+/* ---- زمان ایران: روز کاری از ساعت ۶ صبح شروع می‌شود ---- */
+function vrTehran(off) { const d = new Date(Date.now() + (off || 0) * 864e5), p = {}; new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' }).formatToParts(d).forEach(x => { p[x.type] = x.value; }); return { iso: p.year + '-' + p.month + '-' + p.day, h: +p.hour }; }
+const vrDay = off => vrTehran(off).iso;
+const vrDayFa = iso => new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date(iso + 'T12:00:00Z'));
+/* ---- شبکه ---- */
+const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+async function overpass(q) {
+  let err; for (const u of OVP) { try { const r = await fetch(u, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); return j.elements || []; } catch (e) { err = e; } }
+  throw err || new Error('net');
+}
+async function nominatim(q) { const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=fa&addressdetails=0&q=' + encodeURIComponent(q)); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
+/* ---- هندسه ---- */
+const vrD = (a, b) => { const x = (a.lng - b.lng) * Math.cos((a.lat + b.lat) / 2 * Math.PI / 180), y = a.lat - b.lat; return Math.sqrt(x * x + y * y) * 111.32; };
+function vrKmeans(pts, k) {
+  const n = pts.length; if (k <= 0) return []; if (k >= n) return pts.map((_, i) => i);
+  const cs = [{ lat: pts[0].lat, lng: pts[0].lng }]; while (cs.length < k) { let bi = 0, bd = -1; pts.forEach((p, i) => { const d = Math.min(...cs.map(c => vrD(p, c))); if (d > bd) { bd = d; bi = i; } }); cs.push({ lat: pts[bi].lat, lng: pts[bi].lng }); }
+  let lb = new Array(n).fill(0);
+  for (let it = 0; it < 25; it++) {
+    let ch = false; pts.forEach((p, i) => { let b = 0, bd = 1e9; cs.forEach((c, j) => { const d = vrD(p, c); if (d < bd) { bd = d; b = j; } }); if (lb[i] !== b) { lb[i] = b; ch = true; } });
+    cs.forEach((c, j) => { let w = 0, la = 0, ln = 0; pts.forEach((p, i) => { if (lb[i] === j) { const x = p.w || 1; w += x; la += p.lat * x; ln += p.lng * x; } }); if (w) { c.lat = la / w; c.lng = ln / w; } });
+    if (!ch) break;
+  }
+  const W = j => pts.reduce((s, p, i) => s + (lb[i] === j ? (p.w || 1) : 0), 0), cen = j => { const m = pts.filter((_, i) => lb[i] === j); return m.length ? { lat: m.reduce((s, p) => s + p.lat, 0) / m.length, lng: m.reduce((s, p) => s + p.lng, 0) / m.length } : cs[j]; };
+  for (let j = 0; j < k; j++) if (!lb.includes(j)) { let big = 0; for (let q = 0; q < k; q++) if (W(q) > W(big)) big = q; let bi = -1, bd = -1; pts.forEach((p, i) => { if (lb[i] === big) { const d = vrD(p, cen(big)); if (d > bd) { bd = d; bi = i; } } }); if (bi >= 0) lb[bi] = j; }
+  for (let it = 0; it < 30; it++) { /* موازنهٔ بار بدون پرتاب منطقه‌های دور */
+    let mx = 0, mn = 0; for (let j = 1; j < k; j++) { if (W(j) > W(mx)) mx = j; if (W(j) < W(mn)) mn = j; }
+    if (W(mx) <= 1.5 * Math.max(1, W(mn))) break;
+    const cm = cen(mn); let bi = -1, bd = 1e9; pts.forEach((p, i) => { if (lb[i] === mx && lb.filter(x => x === mx).length > 1) { const d = vrD(p, cm); if (d < bd && W(mn) + (p.w || 1) < W(mx)) { bd = d; bi = i; } } });
+    if (bi < 0) break; lb[bi] = mn;
+  }
+  return lb;
+}
+function vrTour(stops) { /* نزدیک‌ترین همسایه، شروع از شمالی‌ترین */
+  if (stops.length < 3) return stops.slice(); const left = stops.slice(); let cur = left.reduce((a, b) => b.lat > a.lat ? b : a); left.splice(left.indexOf(cur), 1); const out = [cur];
+  while (left.length) { let bi = 0, bd = 1e9; left.forEach((p, i) => { const d = vrD(cur, p); if (d < bd) { bd = d; bi = i; } }); cur = left.splice(bi, 1)[0]; out.push(cur); } return out;
+}
+/* ---- ویزیتورهای فعال: کد دارند، حذف/غیرفعال نشده‌اند ---- */
+function vrVisitors() { const gt = (typeof cat !== 'undefined' && cat.gates) || {}; return S.visitors.filter(v => v.code).map(v => { const g = gt[vcId(v)]; return { v, code: vcId(v), name: v.name, off: !!v.disabled, claimed: !!(g && g.claimed), pub: !!g }; }); }
+const vrActive = () => vrVisitors().filter(x => !x.off && x.claimed);
+/* ---- صفحه ---- */
+A['go-vroute'] = () => { vrUI.page = openPage({ title: 'مسیر ویزیتورها', body: '<div id="vrb"></div>' }); vrUI.page.el._redraw = vrDraw; vrDraw(); if (sync.user) vrRefreshGates(); };
+async function vrRefreshGates() { try { const { fs, db } = sync.fb; const sn = await fs.getDocs(fs.collection(db, 'visitorGate')); cat.gates = {}; sn.forEach(d => { cat.gates[d.id] = d.data(); }); vrDraw(); } catch (e) {} }
+const vrChk = (a, t, on, id) => '<button class="chk tap' + (on ? ' on' : '') + '" data-a="' + a + '" data-id="' + esc(id == null ? '' : id) + '" style="margin-top:6px;padding:9px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>' + t + '</span></button>';
+function vrDraw() {
+  const pg = vrUI.page; if (!pg || !pg.el.isConnected) return; const b = $('#vrb', pg.el); if (!b) return; if (b.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
+  const R = vrS(), vs = vrVisitors(), act = vrActive(), sel = R.regions.filter(r => R.sel[r.id]), q = vrUI.q.trim();
+  const vrow = vs.map(x => '<div class="mrow"><span>' + esc(x.name) + ' <small class="mut" dir="ltr">' + esc(x.v.code) + '</small></span><b class="' + (x.off ? 'neg' : x.claimed ? 'pos' : 'mut') + '">' + (x.off ? 'غیرفعال' : x.claimed ? 'فعال' : x.pub ? 'منتظر ورود' : 'منتشر نشده') + '</b></div>').join('') || '<div class="hint">ویزیتوری ثبت نشده.</div>';
+  const regs = R.regions.filter(r => !q || r.name.includes(q));
+  b.innerHTML = '<div class="box" style="margin-top:12px"><div class="mrow"><b>ویزیتورهای فعال: ' + fa(act.length) + ' از ' + fa(vs.length) + '</b></div>' + vrow + '<div class="hint">فعال = کد گرفته و رمز ساخته. ویزیتورهای حذف‌شده یا غیرفعال حساب نمی‌شوند.</div>' + (sync.user ? '' : '<div class="warn-note">برای انتشار مسیر، در «همگام‌سازی ابری» وارد حساب شو.</div>') + '</div>' +
+    '<div class="box sec"><b>۱) شهر</b><div class="mrow" style="margin-top:6px"><span>' + (R.city ? esc(R.city.name) : '<span class="mut">انتخاب نشده</span>') + '</span><button class="smallbtn tap" data-a="vr-city" style="padding:6px 12px;border-radius:999px;background:var(--soft);color:var(--accent)">' + (R.city ? 'تغییر' : 'انتخاب شهر') + '</button></div></div>' +
+    (R.city ? '<div class="box sec"><b>۲) مناطق (' + fa(R.regions.length) + ')</b><div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="vr-regs" style="padding:9px">دریافت مناطق از نقشه</button><button class="btn ghost tap" data-a="vr-grid" style="padding:9px">ساخت مناطق شبکه‌ای</button></div>' + (vrUI.busy === 'regs' ? '<div class="hint">در حال دریافت…</div>' : '') +
+      (R.regions.length ? '<div class="srow" style="margin-top:10px"><div class="search">' + ico('search', 20) + '<input data-in="vrq" placeholder="جستجوی منطقه" value="' + esc(vrUI.q) + '" autocomplete="off"></div></div><div class="boxes g2" style="margin-top:6px"><button class="btn ghost tap" data-a="vr-all" style="padding:8px">انتخاب همه</button><button class="btn ghost tap" data-a="vr-none" style="padding:8px">هیچ‌کدام</button></div><div class="count">' + fa(sel.length) + ' منطقه انتخاب‌شده</div><div style="max-height:260px;overflow:auto">' + regs.slice(0, 300).map(r => vrChk('vr-tg', esc(r.name) + (R.last[r.id] ? ' <small class="mut">آخرین ویزیت ' + fdate(R.last[r.id]) + '</small>' : ''), R.sel[r.id], r.id)).join('') + '</div>' : '<div class="hint">مناطق را از نقشه بگیر. اگر برای شهرت پیدا نشد، «مناطق شبکه‌ای» شهر را به بخش‌های ۱ کیلومتری تقسیم می‌کند.</div>') + '</div>' +
+      '<div class="box sec"><b>۳) نوع فروشگاه و برد جستجو</b>' + Object.keys(VR_CATS).map(k => vrChk('vr-cat', VR_CATS[k][0], R.cats.includes(k), k)).join('') + '<div class="f"><label>شعاع جستجو دور مرکز هر منطقه</label><div style="padding-top:8px">' + chipsH('vrr', [['500', '۵۰۰ متر'], ['800', '۸۰۰ متر'], ['1200', '۱٫۲ کیلومتر'], ['2000', '۲ کیلومتر']], String(R.radius)) + '</div></div>' + field('حداکثر فروشگاه برای هر ویزیتور در روز', 'vrmx', fa(R.max), { num: 1 }).replace('<input', '<input data-in="vrmx"') + '</div>' +
+      '<div class="box sec"><b>۴) برنامهٔ روز</b><div class="f"><label>برای چه روزی؟</label><div style="padding-top:8px">' + chipsH('vrd', [['0', 'امروز'], ['1', 'فردا'], ['2', 'پس‌فردا']], String(vrUI.day)) + '</div></div><div class="hint">' + vrDayFa(vrDay(vrUI.day)) + ' — ویزیتورها مسیر هر روز را از ساعت ۶ صبح می‌بینند.</div>' +
+      field('چند منطقه برای این روز فعال شود؟', 'vrn', fa(vrUI.n || sel.length), { num: 1 }).replace('<input', '<input data-in="vrn"') + '<div class="hint">اگر کمتر از انتخاب‌شده‌ها بدهی، مناطقی که دیرتر ویزیت شده‌اند اولویت دارند.</div><button class="btn tap" style="margin-top:10px" data-a="vr-plan"' + (act.length && sel.length ? '' : ' disabled') + '>' + (vrUI.busy === 'plan' ? 'در حال ساخت…' : 'دریافت فروشگاه‌ها و تقسیم بین ویزیتورها') + '</button>' + (act.length ? '' : '<div class="warn-note">ویزیتور فعالی نیست.</div>') + '</div>' : '') + vrPlanH() + '<div class="box sec"><b>پیشرفت ویزیتورها</b><div class="hint">بازدیدهای ثبت‌شده توسط ویزیتورها برای ' + vrDayFa(vrDay(vrUI.day)) + '.</div><button class="btn ghost tap" data-a="vr-prog" style="margin-top:8px">به‌روزرسانی پیشرفت</button><div id="vrp">' + vrProgH() + '</div></div>';
+}
+I.vrq = t => { vrUI.q = t.value; vrDraw(); }; I.vrn = t => { vrUI.n = Math.max(0, Math.round(num(t.value))); }; I.vrmx = t => { vrS().max = Math.max(5, Math.round(num(t.value)) || 40); save(); };
+chipH.vrr = v => { vrS().radius = +v; save(); }; chipH.vrd = v => { vrUI.day = +v; vrUI.plan = null; vrDraw(); };
+A['vr-tg'] = t => { const R = vrS(), id = t.dataset.id; R.sel[id] = !R.sel[id]; save(); vrDraw(); };
+A['vr-all'] = () => { const R = vrS(); R.regions.forEach(r => { R.sel[r.id] = 1; }); save(); vrDraw(); }; A['vr-none'] = () => { vrS().sel = {}; save(); vrDraw(); };
+A['vr-cat'] = t => { const R = vrS(), k = t.dataset.id; R.cats = R.cats.includes(k) ? R.cats.filter(x => x !== k) : R.cats.concat(k); save(); vrDraw(); };
+/* شهر */
+A['vr-city'] = () => { const w = openSheet('<h3 class="st">انتخاب شهر</h3><div class="f"><label for="vrcq">نام شهر</label><input id="vrcq" placeholder="مثلاً قم" autocomplete="off"></div><button class="btn tap" style="margin-top:10px" data-a="vr-city-go">جستجو</button><div id="vrcr" class="list" style="margin-top:10px"></div>'); w._rt = 1; };
+A['vr-city-go'] = async () => { const q = $('#vrcq').value.trim(), o = $('#vrcr'); if (!q) return; o.innerHTML = '<div class="hint">در حال جستجو…</div>'; try { const r = (await nominatim(q + ' ایران')).filter(x => /city|town|village|municipality|administrative|county/.test(x.type) || x.category === 'boundary' || x.category === 'place'); vrUI.cr = r; o.innerHTML = r.map((x, i) => rowH({ a: 'vr-city-pick', id: String(i), title: (x.display_name || '').split('،')[0], sub: (x.display_name || '').slice(0, 70), icon: 'pin' })).join('') || '<div class="hint">پیدا نشد.</div>'; } catch (e) { o.innerHTML = '<div class="warn-note">اتصال به نقشه ممکن نشد (اینترنت یا فیلترشکن).</div>'; } };
+A['vr-city-pick'] = t => { const x = vrUI.cr[+t.dataset.id], R = vrS(); R.city = { name: (x.display_name || '').split('،')[0].trim(), lat: +x.lat, lng: +x.lon, osm: x.osm_type, oid: x.osm_id, bb: (x.boundingbox || []).map(Number) }; R.regions = []; R.sel = {}; save(); closeSheet(); vrDraw(); toast('شهر انتخاب شد. حالا مناطق را بگیر.'); };
+/* مناطق */
+A['vr-regs'] = async () => {
+  const R = vrS(), c = R.city; vrUI.busy = 'regs'; vrDraw();
+  try {
+    const f = '["place"~"^(suburb|neighbourhood|quarter|borough)$"]', q = c.osm === 'relation' ? '[out:json][timeout:60];area(' + (3600000000 + c.oid) + ')->.a;(nwr' + f + '(area.a););out center tags;' : '[out:json][timeout:60];(nwr' + f + '(around:9000,' + c.lat + ',' + c.lng + '););out center tags;';
+    const els = await overpass(q), seen = new Set(), out = [];
+    els.forEach(e => { const nm = (e.tags && (e.tags['name:fa'] || e.tags.name || '')).trim(), p = e.type === 'node' ? e : e.center; if (!nm || !p || seen.has(nm)) return; seen.add(nm); out.push({ id: e.type[0] + e.id, name: nm, lat: p.lat, lng: p.lon }); });
+    out.sort((a, b) => a.name.localeCompare(b.name, 'fa')); R.regions = out; R.sel = {}; save(); toast(out.length ? fa(out.length) + ' منطقه پیدا شد' : 'منطقه‌ای پیدا نشد؛ «مناطق شبکه‌ای» را امتحان کن.', !out.length);
+  } catch (e) { toast('دریافت از نقشه ممکن نشد (اینترنت یا فیلترشکن).', 1); }
+  vrUI.busy = ''; vrDraw();
+};
+A['vr-grid'] = () => { const R = vrS(), c = R.city, bb = c.bb && c.bb.length === 4 ? c.bb : [c.lat - .05, c.lat + .05, c.lng - .06, c.lng + .06], step = 1 / 111.32, out = []; let n = 0; for (let la = bb[0]; la < bb[1]; la += step) for (let ln = bb[2]; ln < bb[3]; ln += step / Math.cos(la * Math.PI / 180)) { n++; out.push({ id: 'g' + n, name: 'بخش ' + fa(n), lat: +(la + step / 2).toFixed(5), lng: +(ln + step / 2).toFixed(5) }); } if (out.length > 400) return toast('شهر خیلی بزرگ است؛ از «دریافت مناطق از نقشه» استفاده کن.', 1); R.regions = out; R.sel = {}; save(); toast(fa(out.length) + ' بخش ساخته شد'); vrDraw(); };
+/* فروشگاه‌ها و تقسیم */
+function vrTags(cats) { const m = {}; cats.forEach(k => { const t = VR_CATS[k][1]; Object.keys(t).forEach(key => { m[key] = (m[key] || []).concat(t[key]); }); }); return m; }
+async function vrShops(regs, radius, cats) {
+  const tg = vrTags(cats), keys = Object.keys(tg), seen = new Map();
+  for (let i = 0; i < regs.length; i += 6) {
+    const part = regs.slice(i, i + 6); let q = '[out:json][timeout:60];('; part.forEach(r => { keys.forEach(k => { q += 'nwr["' + k + '"~"^(' + tg[k].join('|') + ')$"](around:' + radius + ',' + r.lat + ',' + r.lng + ');'; }); }); q += ');out center tags;';
+    const els = await overpass(q); els.forEach(e => { const p = e.type === 'node' ? e : e.center; if (!p) return; const id = e.type[0] + e.id; if (seen.has(id)) return; const t = e.tags || {}, ty = t.shop || t.amenity; let br = part[0], bd = 1e9; part.forEach(r => { const d = vrD({ lat: p.lat, lng: p.lon }, r); if (d < bd) { bd = d; br = r; } }); seen.set(id, { id, name: (t['name:fa'] || t.name || (VR_TYPE[ty] || 'فروشگاه') + ' (بدون نام)'), type: VR_TYPE[ty] || ty, lat: +p.lat.toFixed(6), lng: +p.lon.toFixed(6), addr: [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(' '), tel: t.phone || t['contact:phone'] || '', rid: br.id, rn: br.name, d: bd }); });
+  }
+  const all = [...seen.values()], byR = {}; /* هر فروشگاه فقط به نزدیک‌ترین منطقه از بین همهٔ مناطق انتخابی */
+  all.forEach(s => { let br = regs[0], bd = 1e9; regs.forEach(r => { const d = vrD(s, r); if (d < bd) { bd = d; br = r; } }); s.rid = br.id; s.rn = br.name; (byR[br.id] = byR[br.id] || []).push(s); }); return byR;
+}
+A['vr-plan'] = async () => {
+  const R = vrS(), act = vrActive(), sel = R.regions.filter(r => R.sel[r.id]); if (!act.length || !sel.length) return;
+  let n = vrUI.n > 0 ? Math.min(vrUI.n, sel.length) : sel.length; const use = sel.slice().sort((a, b) => (R.last[a.id] || 0) - (R.last[b.id] || 0)).slice(0, n);
+  if (!R.cats.length) return toast('حداقل یک نوع فروشگاه را انتخاب کن.', 1); vrUI.busy = 'plan'; vrDraw();
+  try {
+    const byR = await vrShops(use, R.radius, R.cats), pts = use.map(r => ({ id: r.id, name: r.name, lat: r.lat, lng: r.lng, w: (byR[r.id] || []).length })).filter(p => p.w > 0);
+    if (!pts.length) { vrUI.busy = ''; vrDraw(); return toast('در این مناطق فروشگاهی پیدا نشد. شعاع یا نوع فروشگاه را بیشتر کن.', 1); }
+    const lb = vrKmeans(pts, Math.min(act.length, pts.length)), assign = {}; pts.forEach((p, i) => { assign[p.id] = act[lb[i]].code; });
+    vrUI.plan = { day: vrDay(vrUI.day), regs: pts.map(p => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng })), byR, assign, at: Date.now(), pub: false }; vrBuildStops(vrUI.plan);
+  } catch (e) { toast('دریافت فروشگاه‌ها ممکن نشد (اینترنت یا فیلترشکن).', 1); }
+  vrUI.busy = ''; vrDraw();
+};
+function vrBuildStops(pl) { const R = vrS(), act = vrActive(); pl.stops = {}; act.forEach(a => { let ss = []; pl.regs.forEach(r => { if (pl.assign[r.id] === a.code) ss = ss.concat(byRSafe(pl, r.id)); }); ss = vrTour(ss); if (ss.length > R.max) ss = ss.slice(0, R.max); pl.stops[a.code] = ss.map(s => ({ id: s.id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, addr: s.addr || '', tel: s.tel || '', rn: s.rn })); }); }
+const byRSafe = (pl, id) => (pl.byR && pl.byR[id]) || [];
+function vrPlanH() {
+  const pl = vrUI.plan; if (!pl) return ''; const act = vrActive();
+  return '<div class="box sec"><b>برنامهٔ ' + vrDayFa(pl.day) + '</b>' + act.map(a => { const rs = pl.regs.filter(r => pl.assign[r.id] === a.code), st = pl.stops[a.code] || []; return '<div class="sec" style="margin-top:10px"><div class="mrow"><b>' + esc(a.name) + '</b><span class="pill">' + fa(st.length) + ' فروشگاه</span></div>' + (rs.map(r => '<div class="mrow"><span>' + esc(r.name) + ' <small class="mut">(' + fa(byRSafe(pl, r.id).length) + ')</small></span><select data-in="vras" data-r="' + esc(r.id) + '" style="max-width:45%">' + act.map(x => '<option value="' + x.code + '"' + (x.code === a.code ? ' selected' : '') + '>' + esc(x.name) + '</option>').join('') + '</select></div>').join('') || '<div class="hint">منطقه‌ای به این ویزیتور نرسید.</div>') + '</div>'; }).join('') +
+    '<div class="hint">می‌توانی هر منطقه را با لیست کنارش به ویزیتور دیگری بدهی.</div><button class="btn tap" style="margin-top:10px" data-a="vr-pub">' + (pl.pub ? 'انتشار دوباره' : 'انتشار برای ویزیتورها') + '</button>' + (pl.pub ? '<div class="ok-note">منتشر شد • ' + fdate(pl.pubAt) + ' ' + ftime(pl.pubAt) + '</div>' : '') + '</div>';
+}
+I.vras = t => { const pl = vrUI.plan; pl.assign[t.dataset.r] = t.value; pl.pub = false; vrBuildStops(pl); vrDraw(); };
+A['vr-pub'] = async () => {
+  const pl = vrUI.plan, R = vrS(); if (!pl) return; if (!sync.user || !sync.fb) return toast('اول در «همگام‌سازی ابری» وارد حساب شو.', 1);
+  try {
+    const { fs, db } = sync.fb;
+    for (const a of vrActive()) { const stops = pl.stops[a.code] || []; await fs.setDoc(fs.doc(db, 'routes', pl.day + '_' + a.code), { day: pl.day, code: a.code, name: a.name, stops, regions: pl.regs.filter(r => pl.assign[r.id] === a.code).map(r => r.name), done: {}, at: Date.now() }); }
+    pl.regs.forEach(r => { R.last[r.id] = Date.parse(pl.day + 'T09:00:00Z'); }); pl.pub = true; pl.pubAt = Date.now(); R.plans[pl.day] = { day: pl.day, assign: pl.assign, at: pl.at }; save(); toast('مسیرها برای ویزیتورها منتشر شد'); vrDraw();
+  } catch (e) { toast('انتشار ممکن نشد: ' + errFa(e), 1); }
+};
+/* پیشرفت */
+const vrProgH = () => { const p = vrUI.prog; if (!p) return ''; return p.length ? p.map(x => { const dn = Object.keys(x.done || {}).length, tot = (x.stops || []).length; return '<div class="mrow" style="margin-top:8px"><span>' + esc(x.name || x.code) + '</span><b>' + fa(dn) + ' از ' + fa(tot) + '</b></div><div style="height:6px;border-radius:6px;background:var(--soft)"><div style="height:6px;border-radius:6px;background:var(--accent);width:' + (tot ? Math.round(dn / tot * 100) : 0) + '%"></div></div><div class="hint">' + fa(Object.values(x.done || {}).filter(d => d.res === 'order').length) + ' سفارش • ' + fa(Object.values(x.done || {}).filter(d => d.res === 'closed' || d.res === 'no').length) + ' بسته/بی‌علاقه</div>'; }).join('') : '<div class="hint">برای این روز مسیری منتشر نشده.</div>'; };
+A['vr-prog'] = async () => { if (!sync.user || !sync.fb) return toast('اول وارد حساب شو.', 1); try { const { fs, db } = sync.fb, sn = await fs.getDocs(fs.collection(db, 'routes')), day = vrDay(vrUI.day), r = []; sn.forEach(d => { if (d.id.startsWith(day + '_')) r.push(d.data()); }); vrUI.prog = r; vrDraw(); } catch (e) { toast('دریافت نشد: ' + errFa(e), 1); } };
+
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
 Object.assign(IC, {
   sliders: '<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>',
@@ -4137,7 +4264,7 @@ const _render = render;
 render = function () { _render(); pages.slice().forEach(el => { if (el._redraw) el._redraw(); }); };
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-window.__hesab = { get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L };
+window.__hesab = { get rt() { return { rtKmeans: vrKmeans, rtTour: vrTour, rtS: vrS, rtUI: vrUI, rtBuildStops: vrBuildStops, cat }; }, get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L };
 render();
 
 })();
