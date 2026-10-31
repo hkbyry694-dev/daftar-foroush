@@ -1,6 +1,6 @@
 <!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1b2b8c"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="دفتر فروش"><link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icon-180.png"><title>دفتر فروش</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* ساختار: همه‌چیز باکس گرد؛ با لمس یا انتخاب، زمینه آبی و نوشته/آیکون سفید می‌شود */
 :root{
@@ -3924,7 +3924,7 @@ async function invoiceCanvas(id) {
   const W = 540, SC = 3, PD = 22, navy = '#04234b', orange = '#ffa000', ink = '#13183a', mut = '#6a7392', ln = '#d9e2f2', soft = '#f3f6fc', grn = '#13803c', red = '#b3122b';
   const sale = D_.type === 'sale', bret = D_.type === 'bret', retn = D_.type === 'sret' || bret;
   const title = sale ? 'فاکتور فروش' : bret ? 'رسید مرجوعی خرید' : retn ? 'رسید مرجوعی فروش' : 'فاکتور خرید';
-  try { await Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]); } catch (e) {}
+  try { await Promise.race([Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
   const logo = await loadImg(P.logo || BRAND.icon);
   const mk = h => { const c = document.createElement('canvas'); c.width = W * SC; c.height = Math.max(2, Math.ceil(h * SC)); const x = c.getContext('2d'); x.scale(SC, SC); x.direction = 'rtl'; return [c, x]; };
   const cu = cur(), st_ = b => Math.abs(b) < 1 ? ['تسویه', mut] : b > 0 ? ['بدهکار', red] : ['بستانکار', grn];
@@ -4029,7 +4029,7 @@ async function officialCanvases(id) {
   const D_ = L.invoiceData(S, id); if (!D_ || (D_.type !== 'sale' && D_.type !== 'buy')) return null; const P = prof();
   const W = 842, H = 595, SC = 3, M = 20, navy = '#04234b', ink = '#14171f', mut = '#555b66', ln = '#8a909c', soft = '#eef1f6';
   const sale = D_.type === 'sale', cu = cur();
-  try { await Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]); } catch (e) {}
+  try { await Promise.race([Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
   const logo = await loadImg(P.logo || BRAND.gray);
   /* ردیف‌ها: مالیات متناسب با مبلغ خالص هر قلم */
   const nets = D_.items.map(it => it.total - it.disc), netSum = nets.reduce((a, b) => a + b, 0); let tl = D_.tax;
