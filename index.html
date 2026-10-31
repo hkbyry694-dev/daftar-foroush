@@ -2814,7 +2814,7 @@ async function fbInit() {
   if (sync.fb) return sync.fb;
   const cfg = fbCfg(); if (!cfg) throw new Error('nocfg');
   const [app, auth, fs] = await Promise.all([import(FBU('app')), import(FBU('auth')), import(FBU('firestore'))]);
-  const a = app.initializeApp(cfg); const au = auth.getAuth(a); const db = fs.getFirestore(a);
+  const a = app.initializeApp(cfg); const au = auth.getAuth(a); let db; try { db = fs.initializeFirestore(a, { experimentalForceLongPolling: true, useFetchStreams: false }); } catch (e) { db = fs.getFirestore(a); }
   sync.fb = { app, auth, fs, au, db };
   auth.onAuthStateChanged(au, u => { sync.user = u; if (u) { if (sy.uid && sy.uid !== u.uid) { sy.baseRev = null; sy.dirty = !L.isEmptyState(S); } sy.uid = u.uid; sySave(); watch(); syncNow(); } else { if (sync.unsub) { sync.unsub(); sync.unsub = null; } syNote('out', ''); } });
   try { await auth.getRedirectResult(au); } catch (e) { syNote('err', errFa(e)); }
@@ -3422,34 +3422,48 @@ function catImgSmall(file) {
 const catHash = o => { const s = JSON.stringify(o); let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return String(h); };
 async function catPayload() {
   const on = !!S.settings.catOn, docs = {};
-  if (on) for (const p of S.products) {
-    if (!p.vis || !(p.catPrice > 0)) continue;
-    docs['products/' + p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, stock: Math.max(0, +L.stockOf(S, p.id).toFixed(4)), cat: p.cat || '', cimg: p.cimg || '' };
-  }
   S.visitors.forEach(v => { const es = S.visE.filter(e => e.visitorId === v.id), earned = Math.round(es.filter(e => e.kind !== 'payment').reduce((q, e) => q + e.amount, 0)), paid = Math.round(-es.filter(e => e.kind === 'payment').reduce((q, e) => q + e.amount, 0)); docs['visitors/' + vcId(v)] = { name: v.name, code: v.code, vid: v.id, comm: { earned, paid, rows: es.slice().sort((x, y) => y.ts - x.ts).slice(0, 25).map(e => { const d = S.docs.find(z => z.id === e.ref); return { ts: e.ts, k: e.kind, a: Math.round(e.amount), no: d ? d.no : 0 }; }) } }; docs['visitorGate/' + vcId(v)] = { active: !v.disabled, name: v.name }; });
   docs['config/app'] = { currency: S.settings.currency || 'ریال', allowPriceEdit: !!S.settings.allowPriceEdit, pf: pfCfg() };
   return docs;
 }
+/* کاتالوگ به‌صورت چند «بسته» (هر کدام زیر ۷۰۰ کیلوبایت) + یک سند کوچک «فهرست» منتشر می‌شود.
+   قیمت و عکس و تاریخ تولید فقط وقتی عوض شوند بسته‌ها دوباره ارسال می‌شوند؛ موجودی در فهرستِ کوچک است. */
+function catItems() {
+  const items = {}; if (!S.settings.catOn) return items;
+  for (const p of S.products) { if (!p.vis || !(p.catPrice > 0)) continue;
+    items[p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, cons: p.consPrice || 0, pd: p.prodDate || '', cat: p.cat || '', cimg: p.cimg || '' }; }
+  return items;
+}
+const catStock = items => { const o = {}; Object.keys(items).forEach(id => { o[id] = Math.max(0, +L.stockOf(S, id).toFixed(4)); }); return o; };
+const withTO = (p, ms) => Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
 async function catSync(force) {
   if (!sync.user || !sync.fb || cat.busy || sync.halt) return; if (!navigator.onLine) return;
   cat.busy = true; cat.err = '';
   try {
-    const { fs, db } = sync.fb, docs = await catPayload(), prev = sy.catH || {}, next = {}, ops = [];
+    const { fs, db } = sync.fb, docs = await catPayload(), prev = sy.catH || {}, next = {}, ops = [], items = catItems(), cv = catHash(items); let nCh = sy.catN || 0;
+    if (force || sy.catCv !== cv) {
+      const chunks = Object.keys(items).length ? [{}] : []; let sz = 0;
+      for (const id of Object.keys(items)) { const d = { ...items[id] }; d.img = d.cimg ? (await imgGet(d.cimg)) || '' : ''; delete d.cimg; const n = JSON.stringify(d).length; if (sz + n > 700000 && Object.keys(chunks[chunks.length - 1]).length) { chunks.push({}); sz = 0; } chunks[chunks.length - 1][id] = d; sz += n; }
+      chunks.forEach((c, i) => ops.push(['set', 'config/catc' + i, { items: c, i, at: Date.now() }, true]));
+      for (let i = chunks.length; i < nCh; i++) ops.push(['del', 'config/catc' + i]);
+      nCh = chunks.length;
+      sy._newCv = cv; sy._newN = nCh;
+    }
+    docs['config/catm'] = { cv, n: nCh, count: Object.keys(items).length, stock: catStock(items) };
     for (const k of Object.keys(docs)) {
       const d = { ...docs[k] }, hs = catHash(d); next[k] = hs; if (!force && prev[k] === hs) continue;
-      if (k.startsWith('products/') && d.cimg) { const img = await imgGet(d.cimg); d.img = img || ''; }
-      delete d.cimg; d.at = Date.now(); ops.push(['set', k, d]);
+      d.at = Date.now(); ops.push(['set', k, d]);
     }
     for (const k of Object.keys(prev)) if (!(k in next)) ops.push(['del', k]);
     if (ops.length) {
       if (!sy.catAdmin) { try { const ref = fs.doc(db, 'config', 'admin'), sn = await fs.getDoc(ref); if (!sn.exists()) await fs.setDoc(ref, { uid: sync.user.uid, at: Date.now() }); sy.catAdmin = true; } catch (e) { throw e; } }
       for (let i = 0; i < ops.length; i += 400) {
         const b = fs.writeBatch(db);
-        ops.slice(i, i + 400).forEach(o => { const ref = fs.doc(db, ...o[1].split('/')); if (o[0] === 'set') b.set(ref, o[2], { merge: true }); else b.delete(ref); });
-        await b.commit();
+        ops.slice(i, i + 400).forEach(o => { const ref = fs.doc(db, ...o[1].split('/')); if (o[0] === 'set') { if (o[3]) b.set(ref, o[2]); else b.set(ref, o[2], { merge: true }); } else b.delete(ref); });
+        await withTO(b.commit(), 40000);
       }
     }
-    sy.catH = next; sy.catLast = Date.now(); sySave();
+    sy.catH = next; if (sy._newCv != null) { sy.catCv = sy._newCv; sy.catN = sy._newN; delete sy._newCv; delete sy._newN; } sy.catLast = Date.now(); sySave();
     try { const sn = await fs.getDocs(fs.collection(db, 'visitorGate')); cat.gates = {}; sn.forEach(d => { cat.gates[d.id] = d.data(); }); } catch (e) {}
   } catch (e) { cat.err = errFa(e); }
   cat.busy = false; catDraw();
@@ -3500,13 +3514,14 @@ A['cat-edit'] = t => {
   ce = { id: p.id, img: p.cimg || '', vis: !!p.vis };
   ce.w = openSheet('<h3 class="st">' + esc(p.name) + '</h3><div style="display:flex;gap:12px;align-items:center"><div id="cepv" style="width:96px;height:120px;border-radius:14px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<span class="mut">بدون عکس</span>') + '</div><div style="flex:1"><button class="btn tap" data-a="ce-pick" style="padding:10px">' + ico('image', 18) + 'انتخاب عکس از گالری</button><button class="btn ghost tap" data-a="ce-rm" style="padding:8px;margin-top:6px">حذف عکس</button></div></div>' +
     field('قیمت فروش به ویزیتور (' + cur() + ') — هر ' + esc(p.unit || 'واحد') + ' *', 'cep', p.catPrice ? fa(grp(p.catPrice)) : '', { money: 1 }) + (p.u2 && p.per ? '<div class="hint">قیمت هر ' + esc(p.u2) + ' خودکار = قیمت × ' + fa(p.per) + '</div>' : '') +
+    field('قیمت مصرف‌کننده (' + cur() + ') — اختیاری', 'cepc', p.consPrice ? fa(grp(p.consPrice)) : '', { money: 1 }) + field('تاریخ تولید — اختیاری', 'cepd', p.prodDate || '', { ph: 'مثلاً ۱۴۰۵/۰۷ یا مهر ۱۴۰۵' }) +
     '<button class="chk tap' + (ce.vis ? ' on' : '') + '" data-a="ce-vis" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>برای ویزیتورها نمایان باشد</span></button>' +
     '<div class="pr"><button class="btn tap" data-a="ce-ok">ثبت</button></div>');
 };
 A['ce-pick'] = () => { const i = ceInput(); i.value = ''; i.click(); };
 A['ce-rm'] = () => { ce.img = ''; const pv = $('#cepv', ce.w); if (pv) pv.innerHTML = '<span class="mut">بدون عکس</span>'; };
 A['ce-vis'] = t => { ce.vis = !ce.vis; t.classList.toggle('on', ce.vis); };
-A['ce-ok'] = () => { const p = prod(ce.id), v = num($('#cep', ce.w).value); if (ce.vis && !(v > 0)) return toast('برای نمایش، قیمت را وارد کن.', 1); p.catPrice = v || 0; p.vis = ce.vis; p.cimg = ce.img || ''; save(); closeSheet(ce.w); catDraw(); };
+A['ce-ok'] = () => { const p = prod(ce.id), v = num($('#cep', ce.w).value); if (ce.vis && !(v > 0)) return toast('برای نمایش، قیمت را وارد کن.', 1); p.catPrice = v || 0; p.consPrice = num($('#cepc', ce.w).value) || 0; p.prodDate = ($('#cepd', ce.w).value || '').trim(); p.vis = ce.vis; p.cimg = ce.img || ''; save(); closeSheet(ce.w); catDraw(); };
 
 /* ---- حساب ورود ویزیتور (در صفحه‌ی ویزیتور) ---- */
 function visLoginBox(v) {
@@ -4264,7 +4279,7 @@ const _render = render;
 render = function () { _render(); pages.slice().forEach(el => { if (el._redraw) el._redraw(); }); };
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-window.__hesab = { get rt() { return { rtKmeans: vrKmeans, rtTour: vrTour, rtS: vrS, rtUI: vrUI, rtBuildStops: vrBuildStops, cat }; }, get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L, officialCanvases, invoiceCanvas };
+window.__hesab = { get rt() { return { rtKmeans: vrKmeans, rtTour: vrTour, rtS: vrS, rtUI: vrUI, rtBuildStops: vrBuildStops, cat }; }, get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L, officialCanvases, invoiceCanvas, catSync, sync, sy };
 render();
 
 })();
