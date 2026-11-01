@@ -24,7 +24,7 @@
   --sale:#6e1220;--buy:#0d4f29;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%}
+html{background:var(--card)}html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px;line-height:1.6;
   padding-left:0;padding-right:0;overscroll-behavior:none}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -42,7 +42,7 @@ button{border:0;background:none;cursor:pointer;padding:0}
 .tap:active .chipx,.tap.on .chipx{background:rgba(255,255,255,.2)!important}
 
 /* سرتیتر */
-.top{background:var(--head);color:#fff;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:14px;padding-bottom:14px;border-radius:0 0 26px 26px}
+.top{background:var(--head);color:#fff;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:max(14px,env(safe-area-inset-top,0px));padding-bottom:14px;border-radius:0 0 26px 26px}
 .top h1{margin:0;font-size:19px;font-weight:700}
 .top .sub{opacity:.8;font-size:13px}
 .ledger-pick{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.14);color:#fff;border-radius:var(--r);padding:10px 14px;width:100%;text-align:right}
@@ -1915,12 +1915,25 @@ function tabMoney() {
     '<div class="fabs"><button class="fab-x tap" data-a="newcat">دسته‌بندی جدید</button><button class="fab tap" data-a="fab" aria-label="ثبت جدید">' + ico('plus', 28) + '</button></div>';
 }
 
+const MOKW = { stats: 'آمار سود نمودار فروش محصول برتر تحلیل', partners: 'شریک سهم سود', preorders: 'پیش‌سفارش سفارش ویزیتور صندوق', catalog: 'کاتالوگ قیمت عکس تاریخ انقضا تولید بارکد قیمت مصرف‌کننده انتشار', visitors: 'ویزیتور پورسانت حقوق کمیسیون', vroute: 'مسیر منطقه نقشه فروشگاه برنامه روزانه', reports: 'گزارش اکسل چاپ فروش سود', ledgers: 'دفتر حساب ساخت', profile: 'پروفایل لوگو آدرس تلفن کارت شبا نام کسب‌وکار برند', invset: 'فاکتور رسمی غیررسمی تنظیمات ستون رنگ مهر امضا قالب توضیحات بارکد نام ستون پهنا', settings: 'تنظیمات تم شب روز تیره روشن مالیات واحد پول تومان ریال شماره فاکتور قیمت تمام‌شده', cheques: 'چک دریافتی پرداختی سررسید وصول', rem: 'یادآوری یادآور هشدار سررسید', stocktake: 'انبارگردانی شمارش موجودی اصلاح انبار', stockmove: 'ورود خروج مصرف داخلی ضایعات حرکت کالا', stockrep: 'گزارش مصرف ضایعات', sync: 'همگام‌سازی ابری گوگل ابر ورود حساب', lock: 'قفل رمز پین امنیت', snaps: 'نقاط بازگشت بازگردانی حذف اشتباه برگشت', backup: 'پشتیبان بکاپ ذخیره بازیابی' };
+const moN = t => String(t || '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[\u200c\u200f]/g, ' ').toLowerCase();
+let moQ = '';
+function moItems() {
+  return [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس، قیمت، تاریخ تولید و انقضا برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'تم روز و شب، قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+}
+function moList() {
+  const all = moItems(), q = moN(moQ).trim(); let items = all, note = '';
+  if (q) {
+    const toks = q.split(/\s+/).filter(Boolean), hay = i => moN(i[2] + ' ' + i[3] + ' ' + (MOKW[i[0]] || ''));
+    items = all.filter(i => { const h = hay(i); return toks.every(t => h.includes(t)); });
+    if (!items.length) { items = all.filter(i => { const h = hay(i); return toks.some(t => h.includes(t)); }); note = items.length ? '<div class="hint" style="margin:6px 4px">نتیجه‌ی دقیق پیدا نشد؛ این‌ها نزدیک‌ترند:</div>' : '<div class="hint" style="text-align:center;padding:24px">چیزی پیدا نشد. با کلمه‌ی دیگری امتحان کن؛ مثلاً «چک»، «مالیات»، «مهر» یا «انقضا».</div>'; }
+  }
+  return note + (items.length ? '<div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' : '');
+}
 function tabMore() {
-  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
-  return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' +
+  return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="srow" style="margin:0 0 12px"><div class="search">' + ico('search', 20) + '<input data-in="moq" placeholder="جستجو در همه‌ی بخش‌ها (مثلاً چک، مالیات، مهر…)" value="' + esc(moQ) + '" autocomplete="off"></div></div><div id="mol">' + moList() + '</div>' +
     '<div class="hint" style="text-align:center;margin-top:18px">نسخه ۴ • برای استفاده روی چند دستگاه، همگام‌سازی ابری را روشن کن</div></div>';
 }
-
 const TABS = [['ledger', 'home', 'دفتر', tabLedger], ['inv', 'box', 'انبار', tabInventory], ['acct', 'bank', 'حساب‌ها', tabAccounts], ['money', 'wallet', 'درآمد و هزینه', tabMoney], ['more', 'menu', 'بیشتر', tabMore]];
 function render() {
   const m = $('#main'), sc = m.scrollTop;
@@ -3432,7 +3445,7 @@ async function catPayload() {
 function catItems() {
   const items = {}; if (!S.settings.catOn) return items;
   for (const p of S.products) { if (!p.vis || !(p.catPrice > 0)) continue;
-    items[p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, cons: p.consPrice || 0, pd: p.prodDate || '', cat: p.cat || '', cimg: p.cimg || '' }; }
+    items[p.id] = { name: p.name, unit: p.unit || '', u2: p.u2 || '', per: p.per || 0, price: p.catPrice, cons: p.consPrice || 0, pd: p.prodDate || '', ex: p.expTs || 0, cat: p.cat || '', cimg: p.cimg || '' }; }
   return items;
 }
 const catStock = items => { const o = {}; Object.keys(items).forEach(id => { o[id] = Math.max(0, +L.stockOf(S, id).toFixed(4)); }); return o; };
@@ -3512,17 +3525,20 @@ function ceInput() { if (ceIn) return ceIn; ceIn = document.createElement('input
     try { const d = await catImgSmall(f), id = L.uid(); await imgPut(id, d, false); ce.img = id; const pv = $('#cepv', ce.w); if (pv) pv.innerHTML = '<img src="' + d + '" alt="" style="width:100%;height:100%;object-fit:cover">'; toast('عکس آماده شد (' + fa(Math.round(d.length * 0.75 / 1000)) + ' کیلوبایت)'); } catch (e) { toast('این عکس خوانده نشد.', 1); } }); return ceIn; }
 A['cat-edit'] = t => {
   const p = prod(t.dataset.id); if (!p) return;
-  ce = { id: p.id, img: p.cimg || '', vis: !!p.vis };
+  ce = { id: p.id, img: p.cimg || '', vis: !!p.vis, exp: p.expTs || 0 };
   ce.w = openSheet('<h3 class="st">' + esc(p.name) + '</h3><div style="display:flex;gap:12px;align-items:center"><div id="cepv" style="width:96px;height:120px;border-radius:14px;background:var(--bg);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:none">' + (p.cimg ? '<img data-img="' + p.cimg + '" alt="" style="width:100%;height:100%;object-fit:cover">' : '<span class="mut">بدون عکس</span>') + '</div><div style="flex:1"><button class="btn tap" data-a="ce-pick" style="padding:10px">' + ico('image', 18) + 'انتخاب عکس از گالری</button><button class="btn ghost tap" data-a="ce-rm" style="padding:8px;margin-top:6px">حذف عکس</button></div></div>' +
     field('قیمت فروش به ویزیتور (' + cur() + ') — هر ' + esc(p.unit || 'واحد') + ' *', 'cep', p.catPrice ? fa(grp(p.catPrice)) : '', { money: 1 }) + (p.u2 && p.per ? '<div class="hint">قیمت هر ' + esc(p.u2) + ' خودکار = قیمت × ' + fa(p.per) + '</div>' : '') +
     field('قیمت مصرف‌کننده (' + cur() + ') — اختیاری', 'cepc', p.consPrice ? fa(grp(p.consPrice)) : '', { money: 1 }) + field('تاریخ تولید — اختیاری', 'cepd', p.prodDate || '', { ph: 'مثلاً ۱۴۰۵/۰۷ یا مهر ۱۴۰۵' }) +
+    '<div class="f"><label>تاریخ انقضا — اختیاری</label><div style="display:flex;gap:8px"><button type="button" class="pick tap" data-a="ce-exp" style="flex:1"><span id="cexp">' + (p.expTs ? fdate(p.expTs) : '<span class="mut">انتخاب از تقویم</span>') + '</span>' + ico('calendar', 16) + '</button><button class="btn ghost tap" data-a="ce-exp0" style="padding:8px 12px">حذف</button></div></div>' +
     '<button class="chk tap' + (ce.vis ? ' on' : '') + '" data-a="ce-vis" style="margin-top:12px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>برای ویزیتورها نمایان باشد</span></button>' +
     '<div class="pr"><button class="btn tap" data-a="ce-ok">ثبت</button></div>');
 };
 A['ce-pick'] = () => { const i = ceInput(); i.value = ''; i.click(); };
 A['ce-rm'] = () => { ce.img = ''; const pv = $('#cepv', ce.w); if (pv) pv.innerHTML = '<span class="mut">بدون عکس</span>'; };
+A['ce-exp'] = () => pickDate(ce.exp || Date.now(), ts => { ce.exp = L.dayStart(ts) + 12 * 36e5; $('#cexp', ce.w).textContent = fdate(ce.exp); });
+A['ce-exp0'] = () => { ce.exp = 0; $('#cexp', ce.w).innerHTML = '<span class="mut">انتخاب از تقویم</span>'; };
 A['ce-vis'] = t => { ce.vis = !ce.vis; t.classList.toggle('on', ce.vis); };
-A['ce-ok'] = () => { const p = prod(ce.id), v = num($('#cep', ce.w).value); if (ce.vis && !(v > 0)) return toast('برای نمایش، قیمت را وارد کن.', 1); p.catPrice = v || 0; p.consPrice = num($('#cepc', ce.w).value) || 0; p.prodDate = ($('#cepd', ce.w).value || '').trim(); p.vis = ce.vis; p.cimg = ce.img || ''; save(); closeSheet(ce.w); catDraw(); };
+A['ce-ok'] = () => { const p = prod(ce.id), v = num($('#cep', ce.w).value); if (ce.vis && !(v > 0)) return toast('برای نمایش، قیمت را وارد کن.', 1); p.catPrice = v || 0; p.consPrice = num($('#cepc', ce.w).value) || 0; p.prodDate = ($('#cepd', ce.w).value || '').trim(); p.expTs = ce.exp || 0; p.vis = ce.vis; p.cimg = ce.img || ''; save(); closeSheet(ce.w); catDraw(); };
 
 /* ---- حساب ورود ویزیتور (در صفحه‌ی ویزیتور) ---- */
 function visLoginBox(v) {
@@ -4366,6 +4382,8 @@ A['inv-tpl'] = t => { const x = (ivs().tpls[+t.dataset.i] || {}).x || '', ta = $
 function applyTheme() { const t = (S.settings && S.settings.theme) || 'auto', r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); try { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = (t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches)) ? '#0e1424' : '#04234b'; } catch (e) {} }
 chipH.thm = v => { S.settings.theme = v; save(); applyTheme(); };
 applyTheme();
+I.moq = t => { moQ = t.value; const l = $('#mol'); if (l) l.innerHTML = moList(); };
+A['mo-clr'] = () => { moQ = ''; render(); };
 window.__hesab = { get rt() { return { rtKmeans: vrKmeans, rtTour: vrTour, rtS: vrS, rtUI: vrUI, rtBuildStops: vrBuildStops, cat }; }, get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L, officialCanvases, invoiceCanvas, catSync, sync, sy };
 render();
 
