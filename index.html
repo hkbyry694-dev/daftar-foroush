@@ -1916,7 +1916,7 @@ function tabMoney() {
 }
 
 function tabMore() {
-  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  const items = [['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس و قیمت برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
   return '<div class="top"><h1>بیشتر</h1></div><div class="wrap"><div class="list">' + items.map(i => rowH({ a: 'go-' + i[0], title: i[2], sub: i[3], icon: i[1], end: ico('left', 18) })).join('') + '</div>' +
     '<div class="hint" style="text-align:center;margin-top:18px">نسخه ۴ • برای استفاده روی چند دستگاه، همگام‌سازی ابری را روشن کن</div></div>';
 }
@@ -2203,7 +2203,7 @@ function openInvoice(kind, o) {
   o = o || {};
   const edit = o.editId ? S.docs.find(d => d.id === o.editId) : null;
   const d = edit ? { ledgerId: edit.ledgerId, partyId: edit.partyId, ts: edit.ts, items: edit.items.map(i => ({ pid: i.pid, qty: i.qty, price: i.price, ...(i.gift ? { gift: true, gsrc: i.gsrc } : {}), ...(i.bonus ? { bonus: i.bonus } : {}), ...(i.bn ? { bn: i.bn, bu: i.bu, bp: i.bp } : {}), partners: (i.partners || []).map(p => ({ ...p })) })), taxOn: edit.tax > 0, discMode: edit.discMode || 'amount', discVal: edit.discVal || 0, extra: edit.extra || 0, freight: edit.freight || 0, freightMode: edit.freightMode || 'inv', freightBy: edit.freightBy || 'qty', freightAcct: edit.freightAcct || defAcct('cash'), payType: edit.payType, accountId: edit.accountId || defAcct(edit.payType), visitorId: edit.visitorId || '', partners: (edit.shares || []).filter(s => !s.auto).map(s => ({ partnerId: s.partnerId, mode: s.mode, value: s.value, ...(s.rates ? { rates: s.rates.map(r => ({ ...r })) } : {}) })), note: edit.note || '', att: (edit.att || []).slice(), dueTs: edit.dueTs || null }
-    : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '', att: [], dueTs: null };
+    : { ledgerId: S.activeLedger, partyId: o.partyId || '', ts: Date.now(), items: [], taxOn: false, note: ivs().defNote || '', discMode: 'amount', discVal: 0, extra: 0, freight: 0, freightMode: 'inv', freightBy: 'qty', freightAcct: defAcct('cash'), payType: 'cash', accountId: defAcct('cash'), visitorId: '', partners: [], note: '', att: [], dueTs: null };
   if (o.pre) { const q = o.pre; d.partyId = q.partyId; d.items = q.items; d.discVal = q.disc || 0; d.extra = q.ship || 0; d.visitorId = q.visitorId || ''; d.note = q.note || ''; if (q.pay === 'credit') { d.payType = 'credit'; d.accountId = ''; } }
   inv = { kind, preId: o.pre ? o.pre.id : null, editId: o.editId || null, d, no: edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
   cf = d;
@@ -2238,7 +2238,7 @@ function invBody() {
     '<div class="box sec"><b>نحوه‌ی تسویه</b><div style="margin-top:8px">' + chipsH('pay', [['cash', 'نقدی'], ['pos', 'کارتخوان'], ['bank', 'به حساب بانکی'], ['credit', 'نسیه']], d.payType) + '</div><div id="accw" ' + (d.payType !== 'credit' ? '' : 'hidden') + '>' + select('حساب', 'iac', accOpts(), d.accountId).replace('<select', '<select data-in="iac"') + '</div></div>' +
     (sale ? (S.visitors.length ? select('ویزیتور (اختیاری)', 'ivs', [['', 'بدون ویزیتور']].concat(S.visitors.map(v => [v.id, v.name])), d.visitorId).replace('<select', '<select data-in="ivs"') : '') + '<div class="box sec" id="profit"></div>' : '') +
     '<div class="box sec" id="duew" ' + (d.payType === 'credit' ? '' : 'hidden') + '><div class="mrow"><b>سررسید تسویه (اختیاری)</b><span id="duet" class="mut">' + (d.dueTs ? fdate(d.dueTs) : 'بدون سررسید') + '</span></div><div class="chips ivc" style="flex-wrap:wrap;margin-top:8px"><button class="chip tap" data-a="inv-dued" data-d="7">۷ روز</button><button class="chip tap" data-a="inv-dued" data-d="15">۱۵ روز</button><button class="chip tap" data-a="inv-dued" data-d="30">۳۰ روز</button><button class="chip tap" data-a="inv-duep">تاریخ دلخواه</button><button class="chip tap" data-a="inv-dued" data-d="0">حذف</button></div><div class="hint">برای این سررسید یادآوری در برنامه نشان داده می‌شود.</div></div>' +
-    attSec('inv') + area('توضیحات', 'inote', d.note).replace('<textarea', '<textarea data-in="inote"');
+    attSec('inv') + area('توضیحات', 'inote', d.note).replace('<textarea', '<textarea data-in="inote"') + (ivs().tpls.filter(t => t.x).length ? '<div class="chips" style="flex-wrap:wrap;margin-top:8px">' + ivs().tpls.map((t, i) => t.x ? '<button class="chip tap" data-a="inv-tpl" data-i="' + i + '">' + esc(t.t) + '</button>' : '').join('') + '</div>' : '');
 }
 A['inv-dued'] = t => { const n = +t.dataset.d; inv.d.dueTs = n ? L.dayStart(Date.now()) + n * 864e5 + 12 * 36e5 : null; $('#duet').textContent = inv.d.dueTs ? fdate(inv.d.dueTs) : 'بدون سررسید'; };
 A['inv-duep'] = () => pickDate(inv.d.dueTs || Date.now(), ts => { inv.d.dueTs = L.dayStart(ts) + 12 * 36e5; $('#duet').textContent = fdate(inv.d.dueTs); });
@@ -2642,6 +2642,7 @@ I.set = t => { const k = t.dataset.k; if (k === 'tax') S.settings.taxRate = num(
 function openSettings() {
   const s = S.settings, locked = S.docs.length > 0;
   openPage({ title: 'تنظیمات', body: '<div class="f"><label>واحد پول</label><div style="padding-top:8px">' + chipsH('cur', [['ریال', 'ریال'], ['تومان', 'تومان']], s.currency) + '</div></div><div class="hint">فقط نمایش را عوض می‌کند و عددها تبدیل نمی‌شوند.</div>' +
+    '<div class="f"><label>تم برنامه</label><div style="padding-top:8px">' + chipsH('thm', [['auto', 'خودکار'], ['light', 'روز'], ['dark', 'شب']], s.theme || 'auto') + '</div></div>' +
     '<div class="f"><label>روش محاسبه‌ی قیمت خرید (برای سود فروش‌های جدید)</label><div style="padding-top:8px">' + chipsH('cost', [['fifo', 'فاکتور خرید (FIFO)'], ['avg', 'میانگین'], ['last', 'آخرین خرید']], s.costMode) + '</div></div><div class="hint" id="costd">' + COSTD[s.costMode] + '</div><div class="hint">سود فروش‌های قبلی بعد از تغییر دوباره حساب نمی‌شود.</div>' +
     '<div class="f"><label for="stax">مالیات بر ارزش افزوده (٪)</label><input id="stax" data-in="set" data-k="tax" inputmode="decimal" value="' + fa(s.taxRate) + '"></div>' +
     '<div class="f"><label for="sns">شماره‌ی فاکتور فروش بعدی</label><input id="sns" data-in="set" data-k="ns" inputmode="numeric" value="' + fa(s.nextSale) + '"></div><div class="f"><label for="snb">شماره‌ی فاکتور خرید بعدی</label><input id="snb" data-in="set" data-k="nb" inputmode="numeric" value="' + fa(s.nextBuy) + '"></div>' +
@@ -3920,10 +3921,11 @@ const loadImg = src => new Promise(res => { const i = new Image(); i.onload = ()
 const FNT = (w, s) => w + ' ' + s + 'px Vazirmatn, Tahoma, system-ui, sans-serif';
 const cardFmt = s => fa(en(s)).replace(/(.{4})/g, '$1 ').trim();
 async function invoiceCanvas(id) {
-  const D_ = L.invoiceData(S, id); if (!D_) return null; const P = prof();
-  const W = 540, SC = 3, PD = 22, navy = '#04234b', orange = '#ffa000', ink = '#13183a', mut = '#6a7392', ln = '#d9e2f2', soft = '#f3f6fc', grn = '#13803c', red = '#b3122b';
+  const D_ = L.invoiceData(S, id); if (!D_) return null; const P = prof(), iv = ivs();
+  const W = 540, SC = 3, PD = 22, navy = iv.color, orange = '#ffa000', ink = '#13183a', mut = '#6a7392', ln = '#d9e2f2', soft = '#f3f6fc', grn = '#13803c', red = '#b3122b';
   const sale = D_.type === 'sale', bret = D_.type === 'bret', retn = D_.type === 'sret' || bret;
-  const title = sale ? 'فاکتور فروش' : bret ? 'رسید مرجوعی خرید' : retn ? 'رسید مرجوعی فروش' : 'فاکتور خرید';
+  const title = sale ? LB('t_sale') : bret ? 'رسید مرجوعی خرید' : retn ? 'رسید مرجوعی فروش' : LB('t_buy');
+  const stImg = iv.stamp ? await loadImg(iv.stamp) : null;
   try { await Promise.race([Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
   const logo = await loadImg(P.logo || BRAND.icon);
   const mk = h => { const c = document.createElement('canvas'); c.width = W * SC; c.height = Math.max(2, Math.ceil(h * SC)); const x = c.getContext('2d'); x.scale(SC, SC); x.direction = 'rtl'; return [c, x]; };
@@ -3939,20 +3941,20 @@ async function invoiceCanvas(id) {
     T(title, W / 2, y + 12, { a: 'center', w: 700, s: 21, c: navy }); y += 20;
     if (!dry) { RR(W / 2 - 22, y, 44, 3, 1.5, orange); } y += 20;
     /* سربرگ */
-    const lg = 60, textR = R_ - lg - 12; let hy = y + 16; const hl = [];
+    const lg = Math.round(60 * iv.logoSz / 100), textR = R_ - lg - 12; let hy = y + 16; const hl = [];
     const nm = bizName(); if (nm) hl.push([nm, { w: 700, s: 17, c: navy }]);
     if (P.phone) hl.push([P.phone, { s: 13, c: ink }]);
     if (P.address) wrap('آدرس : ' + P.address, 270, { s: 12.5 }).slice(0, 2).forEach(l => hl.push([l, { s: 12.5, c: mut }]));
     if (!dry) { RR(R_ - lg, y, lg, lg, 14, '#fff', ln); if (logo) { ctx.save(); ctx.beginPath(); ctx.rect(R_ - lg + 3, y + 3, lg - 6, lg - 6); ctx.clip(); const k = Math.min((lg - 8) / logo.width, (lg - 8) / logo.height); const w2 = logo.width * k, h2 = logo.height * k; ctx.drawImage(logo, R_ - lg + (lg - w2) / 2, y + (lg - h2) / 2, w2, h2); ctx.restore(); } }
     hl.forEach(([s, o]) => { T(s, textR, hy, o); hy += (o.s || 13) + 7; });
-    const noLabel = retn ? 'شماره رسید : ' : 'شماره فاکتور : ';
-    T(noLabel + fa(D_.no || ''), L_, y + 18, { a: 'left', s: 13, c: navy, w: 600 });
-    T('تاریخ صدور : ' + fdate(D_.ts), L_, y + 40, { a: 'left', s: 13, c: ink });
+    const noLabel = retn ? 'شماره رسید : ' : LB('no') + ' ';
+    T(noLabel + (iv.prefix || '') + fa(D_.no || ''), L_, y + 18, { a: 'left', s: 13, c: navy, w: 600 });
+    T('تاریخ صدور : ' + fdate(D_.ts) + (iv.showTime ? ' - ' + ftime(D_.ts) : ''), L_, y + 40, { a: 'left', s: 13, c: ink });
     if (retn && D_.srcNo) T('بابت فاکتور ' + (bret ? 'خرید ' : 'فروش ') + fa(D_.srcNo), L_, y + 60, { a: 'left', s: 12, c: mut });
     y += Math.max(lg, hy - y - 6) + 14;
     LN(L_, y, R_, y, ln, 2); y += 14;
     /* طرف‌حساب */
-    const pl = sale ? 'خریدار :' : bret ? 'فروشنده :' : retn ? 'مشتری :' : 'فروشنده :', adr = D_.party.address ? wrap('آدرس : ' + D_.party.address, 440, { s: 12.5 }).slice(0, 2) : [];
+    const pl = sale ? LB('buyer') : bret ? LB('seller') : retn ? 'مشتری :' : LB('seller'), adr = D_.party.address ? wrap('آدرس : ' + D_.party.address, 440, { s: 12.5 }).slice(0, 2) : [];
     const bh = 38 + adr.length * 17; RR(L_, y, W - 2 * PD, bh, 12, soft);
     T(pl, R_ - 12, y + 24, { s: 13, c: mut }); T(D_.party.name, R_ - 12 - M(pl) - 8, y + 24, { w: 700, s: 14.5, c: ink });
     if (D_.party.mobile) T('موبایل : ' + D_.party.mobile, L_ + 12, y + 24, { a: 'left', s: 13 });
@@ -3983,20 +3985,20 @@ async function invoiceCanvas(id) {
     if (D_.tax) row('مالیات', money(D_.tax) + ' ' + cu);
     if (D_.extra) row('هزینه‌های جانبی', money(D_.extra) + ' ' + cu);
     if (D_.freight) row('کرایه بار', money(D_.freight) + ' ' + cu);
-    ty += 4; RR(tx, ty, tw, 38, 10, navy); T(retn ? 'جمع مبلغ مرجوعی' : 'جمع کل فاکتور', rx, ty + 24, { w: 700, s: 13.5, c: '#fff' }); T(money(D_.total) + ' ' + cu, lx, ty + 24, { a: 'left', w: 700, s: 14.5, c: '#fff' }); ty += 50;
+    ty += 4; RR(tx, ty, tw, 38, 10, navy); T(retn ? 'جمع مبلغ مرجوعی' : LB('i_total'), rx, ty + 24, { w: 700, s: 13.5, c: '#fff' }); T(money(D_.total) + ' ' + cu, lx, ty + 24, { a: 'left', w: 700, s: 14.5, c: '#fff' }); ty += 50;
     const sgn = bret ? 1 : retn ? -1 : sg, pv = D_.prev, gross = pv + sgn * D_.total, a = st_(D_.after), p0 = st_(pv), g0 = st_(gross);
     ty += 4;
-    row('مانده از قبل', Math.abs(pv) < 1 ? 'تسویه' : money(Math.abs(pv)) + ' ' + cu + ' (' + p0[0] + ')', { c: p0[1] });
-    row(bret ? 'پس از مرجوعی' : retn ? 'پس از کسر مرجوعی' : 'جمع با این فاکتور', Math.abs(gross) < 1 ? 'تسویه' : money(Math.abs(gross)) + ' ' + cu + ' (' + g0[0] + ')', { c: g0[1], lc: ink });
-    if (D_.paidNow) row(bret ? 'برگشت وجه از تأمین‌کننده' : retn ? 'برگشت وجه به مشتری' : 'پرداخت‌شده هنگام فاکتور' + (D_.payType ? ' (' + L.PAY_FA[D_.payType] + ')' : ''), '− ' + money(D_.paidNow) + ' ' + cu, { c: grn });
-    ty += 2; RR(tx, ty, tw, 36, 10, a[1] === mut ? soft : (a[1] === red ? '#fde7ea' : '#e1f6e8'));
-    T('مانده بعد از ' + (retn ? 'مرجوعی' : 'فاکتور'), rx, ty + 23, { w: 700, s: 13, c: ink }); T(Math.abs(D_.after) < 1 ? 'تسویه' : money(Math.abs(D_.after)) + ' ' + cu + ' (' + a[0] + ')', lx, ty + 23, { a: 'left', w: 700, s: 13.5, c: a[1] }); ty += 46;
+    if (!iv.hideBal) row('مانده از قبل', Math.abs(pv) < 1 ? 'تسویه' : money(Math.abs(pv)) + ' ' + cu + ' (' + p0[0] + ')', { c: p0[1] });
+    if (!iv.hideBal) row(bret ? 'پس از مرجوعی' : retn ? 'پس از کسر مرجوعی' : 'جمع با این فاکتور', Math.abs(gross) < 1 ? 'تسویه' : money(Math.abs(gross)) + ' ' + cu + ' (' + g0[0] + ')', { c: g0[1], lc: ink });
+    if (D_.paidNow) row(bret ? 'برگشت وجه از تأمین‌کننده' : retn ? 'برگشت وجه به مشتری' : LB('i_paid') + (D_.payType ? ' (' + L.PAY_FA[D_.payType] + ')' : ''), '− ' + money(D_.paidNow) + ' ' + cu, { c: grn });
+    if (!iv.hideBal) { ty += 2; RR(tx, ty, tw, 36, 10, a[1] === mut ? soft : (a[1] === red ? '#fde7ea' : '#e1f6e8'));
+    T(retn ? 'مانده بعد از مرجوعی' : LB('i_after'), rx, ty + 23, { w: 700, s: 13, c: ink }); T(Math.abs(D_.after) < 1 ? 'تسویه' : money(Math.abs(D_.after)) + ' ' + cu + ' (' + a[0] + ')', lx, ty + 23, { a: 'left', w: 700, s: 13.5, c: a[1] }); ty += 46; } else ty += 4;
     RR(tx, y0, tw, ty - y0 - 6, 14, null, ln);
     /* اطلاعات پرداخت */
     const cx_ = tx + tw + 12, cwid = R_ - cx_, cr = R_ - 14; let cy2 = y0 + 10; const rowsP = [];
     if (D_.payType) rowsP.push(['نحوه‌ی تسویه', L.PAY_FA[D_.payType] + (D_.accountName && D_.payType !== 'credit' ? ' • ' + D_.accountName : '')]);
     if (retn && D_.settle) rowsP.push(['نحوه‌ی تسویه', D_.settle === 'refund' ? 'برگشت وجه' : bret ? 'کسر از بدهی ما' : 'کسر از حساب مشتری']);
-    if (sale || (retn && !bret)) { if (P.card) rowsP.push(['شماره کارت', cardFmt(P.card)]); if (P.sheba) rowsP.push(['شماره شبا', P.sheba]); if (P.owner) rowsP.push(['به نام', P.owner]); }
+    if (!iv.hideCard && (sale || (retn && !bret))) { if (P.card) rowsP.push(['شماره کارت', cardFmt(P.card)]); if (P.sheba) rowsP.push(['شماره شبا', P.sheba]); if (P.owner) rowsP.push(['به نام', P.owner]); }
     if (rowsP.length) {
       T('اطلاعات پرداخت', cr, cy2 + 14, { w: 700, s: 13, c: navy }); cy2 += 24; LN(cx_ + 12, cy2 - 2, cr, cy2 - 2, ln, 1);
       rowsP.forEach(([l, v]) => { T(l, cr, cy2 + 14, { s: 12, c: mut }); const ltr = /^IR/i.test(v); const vs = ltr ? 10 : 12.5; T(v, cr, cy2 + 31, { s: vs, w: 600, d: ltr ? 'ltr' : 'rtl', a: ltr ? 'right' : 'right' }); cy2 += 38; });
@@ -4005,7 +4007,7 @@ async function invoiceCanvas(id) {
     if (D_.note) { const nl = wrap('توضیحات : ' + D_.note, cwid - 24, { s: 12 }).slice(0, 4); let ny = Math.max(cy2 + 8, y0 + 4 + (rowsP.length ? 0 : 0)); if (!rowsP.length) ny = y0 + 10; nl.forEach((l, i) => T(l, cr, ny + 14 + i * 17, { s: 12, c: mut })); cy2 = Math.max(cy2, ny + nl.length * 17 + 8); }
     y = Math.max(ty, cy2) + 18;
     /* امضا */
-    T(retn ? 'امضای مشتری' : 'مهر و امضای فروشنده', R_ - 4, y + 12, { w: 600, s: 12.5, c: mut }); T(retn ? 'مهر و امضای فروشنده' : 'امضای خریدار', L_ + 120, y + 12, { w: 600, s: 12.5, c: mut, a: 'center' });
+    T(retn ? 'امضای مشتری' : LB('i_gs'), R_ - 4, y + 12, { w: 600, s: 12.5, c: mut }); if (stImg && !retn && !dry) { const k = Math.min(110 / stImg.width, 56 / stImg.height); ctx.drawImage(stImg, R_ - 70 - stImg.width * k / 2, y + 18, stImg.width * k, stImg.height * k); } T(retn ? 'مهر و امضای فروشنده' : LB('i_gb'), L_ + 120, y + 12, { w: 600, s: 12.5, c: mut, a: 'center' });
     y += 74;
     RR(L_, y, W - 2 * PD, 30, 10, soft); T((P.invFooter || '').trim() || ('طراحی و صدور ' + (retn ? 'رسید' : 'فاکتور') + ' توسط دفتر فروش بارینو'), W / 2, y + 20, { a: 'center', s: 11, c: mut }); y += 30;
     return y + 22;
@@ -4027,23 +4029,30 @@ function numWords(n) {
 }
 async function officialCanvases(id) {
   const D_ = L.invoiceData(S, id); if (!D_ || (D_.type !== 'sale' && D_.type !== 'buy')) return null; const P = prof();
-  const W = 842, H = 595, SC = 3, M = 20, navy = '#04234b', ink = '#14171f', mut = '#555b66', ln = '#8a909c', soft = '#eef1f6';
+  const iv = ivs(), W = 842, H = 595, SC = 3, M = 20, navy = iv.color, ink = '#14171f', mut = '#555b66', ln = '#8a909c', soft = '#eef1f6';
   const sale = D_.type === 'sale', cu = cur();
   try { await Promise.race([Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
-  const logo = await loadImg(P.logo || BRAND.gray);
+  const logo = await loadImg(P.logo || BRAND.gray), stImg = iv.stamp ? await loadImg(iv.stamp) : null;
   /* ردیف‌ها: مالیات متناسب با مبلغ خالص هر قلم */
   const nets = D_.items.map(it => it.total - it.disc), netSum = nets.reduce((a, b) => a + b, 0); let tl = D_.tax;
   const rows = D_.items.map((it, i) => { const tx = i === D_.items.length - 1 ? tl : (netSum ? Math.round(D_.tax * nets[i] / netSum) : 0); tl -= tx; return { it, tx, fin: nets[i] + tx }; });
   const sumFin = rows.reduce((a, r) => a + r.fin, 0);
-  const RH = D_.items.some(i => i.bn) ? 27 : 22, FH = 208, y1 = 148, TH = 22, RR_ = 16;
-  const fitF = 7, cap = 7; /* هر صفحه تا ۷ قلم؛ بیشتر از آن به صفحه‌ی بعد می‌رود */
+  const hasBc = !!(iv.cols.bc && rows.some(r => r.it.barcode)), fsx = iv.fs / 100;
+  const colKeys = IVCOLS.map(c => c[0]).filter(k => k === 'bc' ? hasBc : (k === 'no' || k === 'nm' || k === 'fin' || iv.cols[k]));
+  const wsum = colKeys.reduce((a, k) => a + iv.cw[k], 0), cwid = {}; colKeys.forEach(k => { cwid[k] = iv.cw[k] / wsum * (W - 2 * M); });
+  const cols = colKeys.map(k => [k === 'pr' ? LB('c_pr') + ' (' + cu + ')' : LB('c_' + k), cwid[k], k]);
+  const nameW = cwid.nm - 12, mc_ = document.createElement('canvas').getContext('2d');
+  const wrapN = s => { mc_.font = FNT(600, 10 * fsx); const out = []; let cr = ''; for (const w of String(s).split(/\s+/)) { const t = cr ? cr + ' ' + w : w; if (mc_.measureText(t).width > nameW && cr) { out.push(cr); cr = w; } else cr = t; } if (cr) out.push(cr); if (out.length > 2) { let l = out[1]; while (mc_.measureText(l + '…').width > nameW && l.length > 3) l = l.slice(0, -1); return [out[0], l + '…']; } return out; };
+  const y1 = 148, y2_ = 0, TH = 22, RR_ = 16, FH = 208, perPage = Math.max(3, Math.min(8, Math.round(iv.perPage) || 7));
+  const RHn = (D_.items.some(i => i.bn) || rows.some(r => wrapN(r.it.name).length > 1)) ? 28 : 22, RH = Math.max(22, Math.min(RHn, Math.floor((H - RR_ - y1 - TH - FH) / perPage)));
+  const fitF = perPage, cap = perPage;
   const pages = []; let rem = rows.length, pos = 0, pi = 0;
   for (;;) {
     if (rem <= fitF) { pages.push({ a: pos, b: pos + rem, foot: true }); break; }
     const take = Math.min(rem, cap); pages.push({ a: pos, b: pos + take, foot: false }); pos += take; rem -= take; pi++;
     if (rem === 0) { pages.push({ a: pos, b: pos, foot: true }); break; } }
   const st_ = b => Math.abs(b) < 1 ? 'تسویه' : money(Math.abs(b)) + ' ' + cu + (b > 0 ? ' بدهکار' : ' بستانکار');
-  const title = sale ? 'فاکتور فروش' : 'فاکتور خرید', biz = P.name || 'پخش مواد غذایی بارینو';
+  const title = sale ? LB('t_sale') : LB('t_buy'), biz = P.name || 'پخش مواد غذایی بارینو';
   const out = [];
   pages.forEach((pg, pn) => {
     const cv = document.createElement('canvas'); cv.width = W * SC; cv.height = H * SC; const c = cv.getContext('2d'); c.scale(SC, SC); c.direction = 'rtl';
@@ -4057,34 +4066,34 @@ async function officialCanvases(id) {
     c.strokeStyle = navy; c.lineWidth = 1.2; c.strokeRect(10, 10, W - 20, H - 20);
     {
       /* سربرگ (یکسان در همه‌ی صفحه‌ها) */
-      if (logo) { const k = Math.min(70 / logo.width, 70 / logo.height); c.drawImage(logo, R - logo.width * k - 4, 18, logo.width * k, logo.height * k); }
+      if (logo) { const LS = 70 * iv.logoSz / 100, k = Math.min(LS / logo.width, LS / logo.height); c.drawImage(logo, R - logo.width * k - 4, 18, logo.width * k, logo.height * k); }
       T(title, W / 2, 40, { a: 'center', w: 700, s: 21, c: navy }); T(biz, W / 2, 62, { a: 'center', w: 600, s: 13.5, c: ink });
       const sub = [P.phone ? 'تلفن : ' + P.phone : '', P.address ? 'آدرس : ' + P.address : ''].filter(Boolean).join('     ');
       if (sub) wrap(sub, 470, { s: 10.5 }).slice(0, 2).forEach((l, i) => T(l, W / 2, 79 + i * 13, { a: 'center', s: 10.5, c: mut }));
-      T('شماره فاکتور : ' + fa(D_.no || ''), L_ + 6, 38, { a: 'left', s: 12, w: 600, c: navy }); T('تاریخ : ' + fdate(D_.ts), L_ + 6, 57, { a: 'left', s: 12 });
+      T(LB('no') + ' ' + (iv.prefix || '') + fa(D_.no || ''), L_ + 6, 38, { a: 'left', s: 12, w: 600, c: navy }); T(LB('date') + ' ' + fdate(D_.ts) + (iv.showTime ? ' - ' + ftime(D_.ts) : ''), L_ + 6, 57, { a: 'left', s: 12 });
       if (pages.length > 1) T('صفحه ' + fa(pn + 1) + ' از ' + fa(pages.length), L_ + 6, 75, { a: 'left', s: 10, c: mut });
       /* خریدار / فروشنده */
       y = 100; BX(M, y, W - 2 * M, 38, soft);
-      const lab = sale ? 'خریدار :' : 'فروشنده :'; T(lab, R - 10, y + 16, { s: 11, c: mut }); T(D_.party.name, R - 10 - Mz(lab, { s: 11 }) - 8, y + 16, { w: 700, s: 13 });
+      const lab = sale ? LB('buyer') : LB('seller'); T(lab, R - 10, y + 16, { s: 11, c: mut }); T(D_.party.name, R - 10 - Mz(lab, { s: 11 }) - 8, y + 16, { w: 700, s: 13 });
       if (D_.party.mobile) T('موبایل : ' + D_.party.mobile, L_ + 10, y + 16, { a: 'left', s: 11 });
       if (D_.party.address) T('آدرس : ' + wrap(D_.party.address, 640, { s: 10.5 })[0], R - 10, y + 31, { s: 10.5, c: mut });
       y = y1;
     }
     if (pg.a === pg.b && pn > 0) y = y1 - 6; else {
     /* ستون‌ها (راست به چپ) */
-    const hasBc = rows.some(r => r.it.barcode);
-    const cols = hasBc ? [['ردیف', 28], ['بارکد کالا', 92], ['نام کالا', 150], ['مقدار', 54], ['واحد', 48], ['بهای واحد (' + cu + ')', 86], ['جمع مبلغ', 92], ['تخفیف', 62], ['مالیات', 62], ['مبلغ نهایی ردیف', 128]] : [['ردیف', 34], ['نام کالا', 190], ['مقدار', 62], ['واحد', 56], ['بهای واحد (' + cu + ')', 92], ['جمع مبلغ', 100], ['تخفیف', 80], ['مالیات', 80], ['مبلغ نهایی ردیف', 108]];
-    const iN = hasBc ? 2 : 1;
-    let x = R; const xs = cols.map(cl => { const r = x; x -= cl[1]; return [r, cl[1]]; });
+    let x = R; const xs = cols.map(cl => { const r = x; x -= cl[1]; return [r, cl[1]]; }), ci = {}; cols.forEach((cl, i) => { ci[cl[2]] = i; });
     c.fillStyle = navy; c.fillRect(M, y, W - 2 * M, TH);
-    cols.forEach((cl, i) => T(cl[0], xs[i][0] - xs[i][1] / 2, y + 15, { a: 'center', w: 600, s: 10, c: '#fff' }));
+    cols.forEach((cl, i) => T(cl[0], xs[i][0] - xs[i][1] / 2, y + 15, { a: 'center', w: 600, s: 10 * Math.min(1, fsx), c: '#fff' }));
     y += TH;
     for (let i = pg.a; i < pg.b; i++) {
       const r = rows[i], it = r.it, ty = y + RH / 2 + 4;
       if ((i - pg.a) % 2) { c.fillStyle = '#f7f8fb'; c.fillRect(M, y, W - 2 * M, RH); }
-      const vals = [fa(i + 1), ...(hasBc ? [it.barcode || '—'] : []), it.name, qf(it.bn || it.qty), it.bn ? it.bu : it.unit, money(it.bn ? it.bp : it.price), money(it.total), it.disc ? money(it.disc) : '۰', r.tx ? money(r.tx) : '۰', money(r.fin)];
-      vals.forEach((v, k) => { if (hasBc && k === 1) T(v, xs[k][0] - xs[k][1] / 2, ty, { a: 'center', s: 10, d: 'ltr' }); else if (k === iN) { let s = v; while (Mz(s, { s: 11, w: 600 }) > xs[k][1] - 10 && s.length > 3) s = s.slice(0, -1); T(s + (s !== v ? '…' : ''), xs[k][0] - 6, ty, { s: 11, w: 600 }); } else T(v, xs[k][0] - xs[k][1] / 2, ty, { a: 'center', s: 11, w: k === cols.length - 1 ? 700 : 400 }); });
-      if (it.bn) T('(' + qf(it.qty) + ' ' + it.unit + ')', xs[iN + 1][0] - xs[iN + 1][1] / 2, y + RH - 3, { a: 'center', s: 7.5, c: mut });
+      const vo = { no: fa(i + 1), bc: it.barcode || '—', nm: it.name, qty: qf(it.bn || it.qty), un: it.bn ? it.bu : it.unit, pr: money(it.bn ? it.bp : it.price), tot: money(it.total), disc: it.disc ? money(it.disc) : '۰', tax: r.tx ? money(r.tx) : '۰', fin: money(r.fin) };
+      cols.forEach((cl, k) => { const key = cl[2], v = vo[key], cx_ = xs[k][0] - xs[k][1] / 2;
+        if (key === 'bc') { let bs = 10 * fsx; while (Mz(v, { s: bs }) > xs[k][1] - 5 && bs > 5.5) bs -= 0.5; T(v, cx_, ty, { a: 'center', s: bs, d: 'ltr' }); }
+        else if (key === 'nm') { const nl = wrapN(v); if (nl.length === 1) T(nl[0], xs[k][0] - 6, ty, { s: 10.5 * fsx, w: 600 }); else nl.forEach((l, q) => T(l, xs[k][0] - 6, y + RH / 2 - 1 + q * 11, { s: 10 * fsx, w: 600 })); }
+        else T(v, cx_, ty, { a: 'center', s: 11 * fsx, w: key === 'fin' ? 700 : 400 }); });
+      if (it.bn && ci.qty != null) T('(' + qf(it.qty) + ' ' + it.unit + ')', xs[ci.qty][0] - xs[ci.qty][1] / 2, y + RH - 3, { a: 'center', s: 7.5, c: mut });
       LN(M, y + RH, R, y + RH, 0.4); y += RH;
     }
     /* خطوط عمودی */
@@ -4096,29 +4105,30 @@ async function officialCanvases(id) {
       /* بلوک جمع‌ها (چپ) */
       const tw = 300, tx = L_; let ty = y;
       const tr = (l, v, o) => { o = o || {}; BX(tx, ty, tw, 18, o.f); T(l, tx + tw - 8, ty + 13, { s: o.s || 10, w: o.w || 400, c: o.c || ink }); T(v, tx + 8, ty + 13, { a: 'left', s: o.s || 10, w: o.w || 600, c: o.c || ink }); ty += 18; };
-      tr('جمع مبلغ کالاها (با احتساب تخفیف و مالیات اقلام)', money(sumFin) + ' ' + cu, { s: 9 });
-      tr('تخفیف کلی (کسر می‌شود)', '۰ ' + cu); tr('مالیات کلی (اضافه می‌شود)', '۰ ' + cu);
-      tr('اضافات فاکتور (اضافه می‌شود)', money(D_.extra + D_.freight) + ' ' + cu); tr('کسورات فاکتور (کسر می‌شود)', '۰ ' + cu);
-      tr('مبلغ قابل پرداخت فاکتور', money(D_.total) + ' ' + cu, { w: 700, s: 11, f: soft, c: navy });
+      tr(LB('s_sum'), money(sumFin) + ' ' + cu, { s: 9 });
+      tr(LB('s_disc'), '۰ ' + cu); tr(LB('s_tax'), '۰ ' + cu);
+      tr(LB('s_extra'), money(D_.extra + D_.freight) + ' ' + cu); tr(LB('s_ded'), '۰ ' + cu);
+      tr(LB('s_pay'), money(D_.total) + ' ' + cu, { w: 700, s: 11, f: soft, c: navy });
       /* مبلغ به حروف + مانده حساب (راست) */
       const rw = W - 2 * M - tw - 14, rr = R; let ry = y;
-      BX(R - rw, ry, rw, 38, null); T('مبلغ قابل پرداخت به حروف :', rr - 8, ry + 13, { s: 9.5, c: mut });
+      BX(R - rw, ry, rw, 38, null); T(LB('s_words'), rr - 8, ry + 13, { s: 9.5, c: mut });
       wrap(numWords(D_.total) + ' ' + cu, rw - 16, { s: 11, w: 600 }).slice(0, 2).forEach((l, i) => T(l, rr - 8, ry + 25 + i * 11, { s: 10.5, w: 600 })); ry += 38;
       const ar = (l, v) => { BX(R - rw, ry, rw, 18, null); T(l, rr - 8, ry + 13, { s: 10 }); T(v, R - rw + 8, ry + 13, { a: 'left', s: 10, w: 600 }); ry += 18; };
-      ar('مانده حساب بدون فاکتور جاری', st_(D_.prev)); ar('مانده حساب نهایی', st_(D_.after));
-      if (D_.payType) ar('نحوه‌ی تسویه', L.PAY_FA[D_.payType] + (D_.accountName && D_.payType !== 'credit' ? ' • ' + D_.accountName : ''));
-      if (sale && P.card) ar('شماره کارت' + (P.owner ? ' (' + P.owner + ')' : ''), cardFmt(P.card));
-      else if (sale && P.owner) ar('به نام', P.owner);
-      if (sale && P.sheba) ar('شماره شبا', P.sheba);
+      if (!iv.hideBal) { ar(LB('b_prev'), st_(D_.prev)); ar(LB('b_after'), st_(D_.after)); }
+      if (D_.payType) ar(LB('b_type'), L.PAY_FA[D_.payType] + (D_.accountName && D_.payType !== 'credit' ? ' • ' + D_.accountName : ''));
+      if (!iv.hideCard && sale && P.card) ar('شماره کارت' + (P.owner ? ' (' + P.owner + ')' : ''), cardFmt(P.card));
+      else if (!iv.hideCard && sale && P.owner) ar('به نام', P.owner);
+      if (!iv.hideCard && sale && P.sheba) ar('شماره شبا', P.sheba);
       if (D_.note && ry < y + 128) ar('توضیحات', wrap(D_.note, rw - 140, { s: 10 })[0]);
       y = Math.max(ty, ry) + 8;
       /* امضا */
       const sy = y - 4;
-      T('امضا فروشنده', R - 115, sy + 10, { a: 'center', w: 600, s: 11, c: mut });
-      T('امضا تحویل گیرنده', L_ + 115, sy + 10, { a: 'center', w: 600, s: 11, c: mut });
-      T('این فاکتور پس از امضای طرفین معتبر است و ایرادات باید هنگام تحویل کالا اعلام شود.', W / 2, sy + 34, { a: 'center', s: 9, c: mut });
+      if (stImg) { const k = Math.min(100 / stImg.width, 48 / stImg.height); c.drawImage(stImg, R - 115 - stImg.width * k / 2, sy + 14, stImg.width * k, stImg.height * k); }
+      T(LB('g_seller'), R - 115, sy + 10, { a: 'center', w: 600, s: 11, c: mut });
+      T(LB('g_buyer'), L_ + 115, sy + 10, { a: 'center', w: 600, s: 11, c: mut });
+      T((iv.offFooter || '').trim() || LB('disc'), W / 2, sy + 34, { a: 'center', s: 9, c: mut });
       /* نشان کوچک: لوگو سمت چپ، متن سمت راستِ آن */
-      { const t1 = '(سهامی خاص)', t2 = 'گروه تجاری حسینی', tw2 = Math.max(Mz(t1, { s: 8.5 }), Mz(t2, { s: 8.5, w: 600 })), lh = 20, lw = logo ? logo.width * Math.min(lh / logo.height, 40 / logo.width) : 0, gap = logo ? 6 : 0, bw = lw + gap + tw2, bx = (W - bw) / 2, by = sy + 42;
+      if (iv.badge) { const t1 = '(سهامی خاص)', t2 = 'گروه تجاری حسینی', tw2 = Math.max(Mz(t1, { s: 8.5 }), Mz(t2, { s: 8.5, w: 600 })), lh = 20, lw = logo ? logo.width * Math.min(lh / logo.height, 40 / logo.width) : 0, gap = logo ? 6 : 0, bw = lw + gap + tw2, bx = (W - bw) / 2, by = sy + 42;
         if (logo) c.drawImage(logo, bx, by, lw, logo.height * Math.min(lh / logo.height, 40 / logo.width));
         T(t1, bx + bw, by + 8, { a: 'right', s: 8.5, c: mut }); T(t2, bx + bw, by + 19, { a: 'right', s: 8.5, w: 600, c: mut }); }
     }
@@ -4138,7 +4148,7 @@ function openInvoiceView(id) {
   const d = S.docs.find(x => x.id === id), canOff = d && (d.type === 'sale' || d.type === 'buy');
   const p = openPage({ title: 'فاکتور', body: (canOff ? '<div class="chips ivc" style="padding:12px 16px 0"><button class="chip tap ivm on" data-a="iv-mode" data-m="inf">فاکتور غیررسمی</button><button class="chip tap ivm" data-a="iv-mode" data-m="off">فاکتور رسمی (A4 افقی)</button></div>' : '') + '<div class="invv" id="invv"></div>',
     foot: '<button class="btn tap" data-a="iv-print">' + ico('print', 18) + 'چاپ / PDF</button><button class="btn ghost tap" data-a="iv-img">' + ico('image', 18) + 'ارسال / ذخیره تصویر</button>' });
-  p.el._id = id; p.el._mode = 'inf'; invShow(p.el);
+  p.el._id = id; p.el._mode = canOff && ivs().defMode === 'off' ? 'off' : 'inf'; invShow(p.el);
 }
 A['iv-mode'] = t => { const pg = t.closest('.page'); pg._mode = t.dataset.m; invShow(pg); };
 A['d-inv'] = t => openInvoiceView(t.closest('.page')._id);
@@ -4281,6 +4291,81 @@ const _render = render;
 render = function () { _render(); pages.slice().forEach(el => { if (el._redraw) el._redraw(); }); };
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+/* ================= تنظیمات فاکتور ================= */
+const IVD = { color: '#04234b', logoSz: 100, fs: 100, cols: { bc: 1, qty: 1, un: 1, pr: 1, tot: 1, disc: 1, tax: 1 },
+  cw: { no: 26, bc: 84, nm: 204, qty: 52, un: 44, pr: 84, tot: 88, disc: 54, tax: 54, fin: 112 },
+  hideBal: 0, hideCard: 0, badge: 1, offFooter: '', perPage: 7, showTime: 0, prefix: '', defMode: 'inf', defNote: '', tpls: [{ t: 'امانی', x: 'کالاهای این فاکتور به‌صورت امانی تحویل شده و تا زمان فروش، مالکیت آن‌ها با فروشنده است. کالای فروش‌نرفته تا پایان مهلت اعتبار مصرف (تاریخ انقضا) به‌صورت سالم و در بسته‌بندی اصلی قابل مرجوع است. تسویه‌ی حساب فقط بر اساس کالای فروش‌رفته انجام می‌شود.' }, { t: 'نقدی', x: 'تسویه‌ی این فاکتور به‌صورت نقدی انجام شده است.' }], stamp: '', lb: {} };
+function ivs() {
+  const s = S.invSet || (S.invSet = {});
+  for (const k of Object.keys(IVD)) if (s[k] === undefined) s[k] = JSON.parse(JSON.stringify(IVD[k]));
+  for (const k of Object.keys(IVD.cols)) if (s.cols[k] === undefined) s.cols[k] = 1;
+  for (const k of Object.keys(IVD.cw)) if (!(s.cw[k] > 0)) s.cw[k] = IVD.cw[k];
+  return s;
+}
+const IVL = [
+  ['عنوان‌ها', [['t_sale', 'فاکتور فروش'], ['t_buy', 'فاکتور خرید'], ['buyer', 'خریدار :'], ['seller', 'فروشنده :'], ['no', 'شماره فاکتور :'], ['date', 'تاریخ :']]],
+  ['ستون‌های جدول فاکتور رسمی', [['c_no', 'ردیف'], ['c_bc', 'بارکد کالا'], ['c_nm', 'نام کالا'], ['c_qty', 'مقدار'], ['c_un', 'واحد'], ['c_pr', 'بهای واحد'], ['c_tot', 'جمع مبلغ'], ['c_disc', 'تخفیف'], ['c_tax', 'مالیات'], ['c_fin', 'مبلغ نهایی ردیف']]],
+  ['جمع‌ها و مانده‌ها', [['s_sum', 'جمع مبلغ کالاها (با احتساب تخفیف و مالیات اقلام)'], ['s_disc', 'تخفیف کلی (کسر می‌شود)'], ['s_tax', 'مالیات کلی (اضافه می‌شود)'], ['s_extra', 'اضافات فاکتور (اضافه می‌شود)'], ['s_ded', 'کسورات فاکتور (کسر می‌شود)'], ['s_pay', 'مبلغ قابل پرداخت فاکتور'], ['s_words', 'مبلغ قابل پرداخت به حروف :'], ['b_prev', 'مانده حساب بدون فاکتور جاری'], ['b_after', 'مانده حساب نهایی'], ['b_type', 'نحوه‌ی تسویه']]],
+  ['فاکتور غیررسمی', [['i_total', 'جمع کل فاکتور'], ['i_after', 'مانده بعد از فاکتور'], ['i_paid', 'پرداخت‌شده هنگام فاکتور']]],
+  ['امضا و متن پایین', [['g_seller', 'امضا فروشنده'], ['g_buyer', 'امضا تحویل گیرنده'], ['i_gs', 'مهر و امضای فروشنده'], ['i_gb', 'امضای خریدار'], ['disc', 'این فاکتور پس از امضای طرفین معتبر است و ایرادات باید هنگام تحویل کالا اعلام شود.']]]
+];
+const IVLD = {}; IVL.forEach(g => g[1].forEach(([k, d]) => { IVLD[k] = d; }));
+const LB = k => { const v = ((ivs().lb || {})[k] || '').trim(); return v || IVLD[k] || ''; };
+const IVCOLS = [['no', 'ردیف', 0], ['bc', 'بارکد کالا', 1], ['nm', 'نام کالا', 0], ['qty', 'مقدار', 1], ['un', 'واحد', 1], ['pr', 'بهای واحد', 1], ['tot', 'جمع مبلغ', 1], ['disc', 'تخفیف', 1], ['tax', 'مالیات', 1], ['fin', 'مبلغ نهایی ردیف', 0]];
+const IVCOL_ = ['#04234b', '#0b5cad', '#0f7a4a', '#7a1f3d', '#4a2a82', '#333a44'];
+function tgH(k, t, v) { return '<button class="chk tap' + (v ? ' on' : '') + '" data-a="ivs-tg" data-k="' + k + '" style="margin-top:8px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card);width:100%"><span class="b">' + ico('check', 16) + '</span><span>' + t + '</span></button>'; }
+function rgH(k, t, v, mn, mx, st, unit, sub) { return '<div class="f"><label>' + t + ' <b id="rv_' + k + (sub ? '_' + sub : '') + '">' + fa(v) + unit + '</b></label><input type="range" data-in="ivr" data-k="' + k + '"' + (sub ? ' data-sub="' + sub + '"' : '') + ' min="' + mn + '" max="' + mx + '" step="' + st + '" value="' + v + '" style="width:100%"></div>'; }
+function openInvSet() {
+  const s = ivs(), P = prof();
+  openPage({ title: 'تنظیمات فاکتور', body:
+    '<div class="hint" style="margin-top:12px">همه‌ی تغییرها روی فاکتورهای بعدی و فاکتورهای قبلی (هنگام دیدن دوباره) اعمال می‌شود.</div>' +
+    '<div class="box sec"><b>ظاهر</b><div class="f"><label>رنگ اصلی فاکتور</label><div style="display:flex;gap:10px;padding-top:8px;flex-wrap:wrap">' + IVCOL_.map(c => '<button class="tap" data-a="ivs-col" data-c="' + c + '" style="width:38px;height:38px;border-radius:50%;background:' + c + ';border:3px solid ' + (s.color === c ? 'var(--accent,#fa0)' : 'transparent') + '"></button>').join('') + '</div></div>' +
+      rgH('logoSz', 'اندازه‌ی لوگو', s.logoSz, 50, 130, 5, '٪') + rgH('fs', 'اندازه‌ی نوشته‌های جدول', s.fs, 85, 120, 5, '٪') + tgH('badge', 'نشان «گروه تجاری» پایین فاکتور رسمی', s.badge) + '</div>' +
+    '<div class="box sec"><b>ستون‌های فاکتور رسمی (نمایش و پهنا)</b><div class="hint">پهنا نسبی است؛ ستون‌هایی که کوتاه می‌کنید جا را به بقیه (مثلاً نام کالا) می‌دهند. ستون بارکد فقط وقتی کالایی بارکد داشته باشد دیده می‌شود.</div>' +
+      IVCOLS.map(c => (c[2] ? tgH('col_' + c[0], 'نمایش ستون «' + esc(LB('c_' + c[0])) + '»', s.cols[c[0]]) : '') + rgH('cw', 'پهنا: ' + esc(LB('c_' + c[0])), s.cw[c[0]], 20, 300, 2, '', c[0])).join('') +
+      '<button class="btn ghost tap" data-a="ivs-cw0" style="margin-top:10px">بازگشت پهنا‌ها به پیش‌فرض</button></div>' +
+    '<div class="box sec"><b>محتوا</b>' + tgH('hideBal', 'مخفی کردن مانده‌ی حساب (قبل و بعد از فاکتور)', s.hideBal) + tgH('hideCard', 'مخفی کردن شماره کارت و شبا', s.hideCard) + tgH('showTime', 'نمایش ساعت صدور کنار تاریخ', s.showTime) +
+      '<div class="f"><label for="ivp">پیشوند شماره‌ی فاکتور (اختیاری، مثلاً ۱۴۰۵-)</label><input id="ivp" data-in="ivt" data-k="prefix" value="' + esc(s.prefix) + '" autocomplete="off"></div>' +
+      '<div class="f"><label for="ivo">متن پایین فاکتور رسمی (خالی = متن پیش‌فرض)</label><textarea id="ivo" data-in="ivt" data-k="offFooter" placeholder="' + esc(IVLD.disc) + '">' + esc(s.offFooter) + '</textarea></div>' +
+      '<div class="f"><label for="ivi">متن پایین فاکتور تصویری (غیررسمی)</label><input id="ivi" data-in="prof" data-k="invFooter" value="' + esc(P.invFooter || '') + '" placeholder="طراحی و صدور فاکتور توسط دفتر فروش بارینو" autocomplete="off"></div></div>' +
+    '<div class="box sec"><b>رفتار</b><div class="f"><label>نوع پیش‌فرض خروجی فاکتور فروش و خرید</label><div style="padding-top:8px">' + chipsH('ivdm', [['inf', 'غیررسمی'], ['off', 'رسمی']], s.defMode) + '</div></div>' +
+      rgH('perPage', 'تعداد قلم در هر صفحه‌ی فاکتور رسمی', s.perPage, 3, 8, 1, ' قلم') + '<div class="hint">بیشتر از ۷ قلم ردیف‌ها را کمی فشرده می‌کند. شماره‌ی فاکتور بعدی را از «تنظیمات» اصلی عوض کنید.</div></div>' +
+    '<div class="box sec"><b>مهر و امضای تصویری فروشنده</b><div class="mrow"><div id="ivst" style="width:110px;height:64px;border-radius:12px;background:var(--bg) center/contain no-repeat;border:1px solid var(--line,#ddd)"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><button class="btn tap" data-a="ivs-stamp">' + ico('image', 18) + 'انتخاب عکس مهر</button><button class="btn ghost tap" data-a="ivs-stamp0">حذف مهر</button></div></div><input type="file" id="ivsf" accept="image/*" hidden><div class="hint">بهتر است عکس مهر روی زمینه‌ی سفید یا شفاف باشد.</div></div>' +
+    '<div class="box sec"><b>متن آماده‌ی توضیحات</b><div class="hint">هنگام ساخت فاکتور با یک ضربه در «توضیحات» می‌نشیند.</div><div id="ivtp"></div><button class="btn ghost tap" data-a="ivs-tpadd" style="margin-top:8px">+ قالب جدید</button>' +
+      '<div class="f"><label for="ivdn">توضیحات پیش‌فرض فاکتور جدید (اختیاری)</label><textarea id="ivdn" data-in="ivt" data-k="defNote">' + esc(s.defNote) + '</textarea></div></div>' +
+    IVL.map(g => '<div class="box sec"><b>نام‌ها: ' + g[0] + '</b>' + g[1].map(([k, d]) => '<div class="f"><label>' + esc(d) + '</label><input data-in="ivl" data-k="' + k + '" value="' + esc((s.lb || {})[k] || '') + '" placeholder="' + esc(d) + '" autocomplete="off"></div>').join('') + '</div>').join('') +
+    '<div class="pr"><button class="btn ghost tap" data-a="ivs-lb0">بازگشت همه‌ی نام‌ها به پیش‌فرض</button></div>',
+    mount: p => { stDraw(p.el); tpDraw(p.el); } });
+}
+function stDraw(el) { const b = $('#ivst', el); if (b) b.style.backgroundImage = ivs().stamp ? 'url("' + ivs().stamp + '")' : 'none'; }
+function tpDraw(el) { const b = $('#ivtp', el); if (!b) return; b.innerHTML = ivs().tpls.map((t, i) => '<div class="box" style="margin-top:8px"><input data-in="ivtt" data-i="' + i + '" value="' + esc(t.t) + '" placeholder="عنوان قالب" style="margin-bottom:6px"><textarea data-in="ivtx" data-i="' + i + '" placeholder="متن">' + esc(t.x) + '</textarea><button class="btn ghost tap" data-a="ivs-tpdel" data-i="' + i + '" style="margin-top:6px;padding:8px">حذف این قالب</button></div>').join(''); }
+A['go-invset'] = () => openInvSet();
+A['ivs-tg'] = t => { const k = t.dataset.k, s = ivs(); if (k.startsWith('col_')) s.cols[k.slice(4)] = s.cols[k.slice(4)] ? 0 : 1; else s[k] = s[k] ? 0 : 1; t.classList.toggle('on'); save(); };
+A['ivs-col'] = t => { ivs().color = t.dataset.c; save(); t.parentNode.querySelectorAll('button').forEach(b => { b.style.borderColor = b === t ? 'var(--accent,#fa0)' : 'transparent'; }); };
+A['ivs-cw0'] = t => { ivs().cw = JSON.parse(JSON.stringify(IVD.cw)); save(); const pg = t.closest('.page'); pg.querySelectorAll('input[data-in="ivr"][data-sub]').forEach(e => { e.value = IVD.cw[e.dataset.sub]; const l = $('#rv_cw_' + e.dataset.sub, pg); if (l) l.textContent = fa(e.value); }); toast('پهنا‌ها بازنشانی شد'); };
+A['ivs-lb0'] = t => ask('همه‌ی نام‌ها به پیش‌فرض برگردد؟', 'بازگشت', () => { ivs().lb = {}; save(); t.closest('.page').querySelectorAll('input[data-in="ivl"]').forEach(e => { e.value = ''; }); toast('انجام شد'); });
+A['ivs-stamp'] = t => { const f = $('#ivsf', t.closest('.page')); f.value = ''; f.click(); };
+A['ivs-stamp0'] = t => { ivs().stamp = ''; save(); stDraw(t.closest('.page')); };
+A['ivs-tpadd'] = t => { ivs().tpls.push({ t: 'قالب جدید', x: '' }); save(); tpDraw(t.closest('.page')); };
+A['ivs-tpdel'] = t => { ivs().tpls.splice(+t.dataset.i, 1); save(); tpDraw(t.closest('.page')); };
+chipH.ivdm = v => { ivs().defMode = v; save(); };
+I.ivr = t => { const s = ivs(), k = t.dataset.k, v = +t.value; if (k === 'cw') s.cw[t.dataset.sub] = v; else s[k] = v; const l = $('#rv_' + k + (t.dataset.sub ? '_' + t.dataset.sub : ''), t.closest('.page')); if (l) l.textContent = fa(v) + (k === 'perPage' ? ' قلم' : k === 'cw' ? '' : '٪'); save(); };
+I.ivt = t => { ivs()[t.dataset.k] = t.value; save(); };
+I.ivl = t => { const s = ivs(); s.lb = s.lb || {}; s.lb[t.dataset.k] = t.value; save(); };
+I.ivtt = t => { ivs().tpls[+t.dataset.i].t = t.value; save(); };
+I.ivtx = t => { ivs().tpls[+t.dataset.i].x = t.value; save(); };
+document.addEventListener('change', e => {
+  const f = e.target; if (!f || f.id !== 'ivsf' || !f.files || !f.files[0]) return;
+  const rd = new FileReader();
+  rd.onload = () => { const img = new Image(); img.onload = () => { const m = 360, sc = Math.min(1, m / Math.max(img.width, img.height)), w = Math.round(img.width * sc), h = Math.round(img.height * sc), c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); ivs().stamp = c.toDataURL('image/png'); save(); stDraw(f.closest('.page')); toast('مهر ذخیره شد'); }; img.onerror = () => toast('این تصویر خوانده نشد.', 1); img.src = rd.result; };
+  rd.readAsDataURL(f.files[0]);
+});
+A['inv-tpl'] = t => { const x = (ivs().tpls[+t.dataset.i] || {}).x || '', ta = $('#inote', t.closest('.page') || document); if (!ta || !inv) return; ta.value = (ta.value ? ta.value.trim() + '\n' : '') + x; inv.d.note = ta.value; };
+/* تم روز و شب */
+function applyTheme() { const t = (S.settings && S.settings.theme) || 'auto', r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); try { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = (t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches)) ? '#0e1424' : '#04234b'; } catch (e) {} }
+chipH.thm = v => { S.settings.theme = v; save(); applyTheme(); };
+applyTheme();
 window.__hesab = { get rt() { return { rtKmeans: vrKmeans, rtTour: vrTour, rtS: vrS, rtUI: vrUI, rtBuildStops: vrBuildStops, cat }; }, get pre() { return pre; }, get S() { return S; }, set S(v) { S = v; }, render, L, officialCanvases, invoiceCanvas, catSync, sync, sy };
 render();
 
