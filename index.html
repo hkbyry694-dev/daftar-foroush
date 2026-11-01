@@ -2833,7 +2833,7 @@ async function fbInit() {
   if (sync.fb) return sync.fb;
   const cfg = fbCfg(); if (!cfg) throw new Error('nocfg');
   const [app, auth, fs] = await Promise.all([import(FBU('app')), import(FBU('auth')), import(FBU('firestore'))]);
-  const a = app.initializeApp(cfg); const au = auth.getAuth(a); let db; try { db = fs.initializeFirestore(a, { experimentalForceLongPolling: true, useFetchStreams: false }); } catch (e) { db = fs.getFirestore(a); }
+  const a = app.initializeApp(cfg); const au = auth.getAuth(a); let db; try { db = fs.initializeFirestore(a, { experimentalAutoDetectFallback: true, useFetchStreams: false }); } catch (e) { db = fs.getFirestore(a); }
   sync.fb = { app, auth, fs, au, db };
   auth.onAuthStateChanged(au, u => { sync.user = u; if (u) { if (sy.uid && sy.uid !== u.uid) { sy.baseRev = null; sy.dirty = !L.isEmptyState(S); } sy.uid = u.uid; sySave(); watch(); syncNow(); } else { if (sync.unsub) { sync.unsub(); sync.unsub = null; } syNote('out', ''); } });
   try { await auth.getRedirectResult(au); } catch (e) { syNote('err', errFa(e)); }
