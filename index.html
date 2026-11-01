@@ -1211,7 +1211,7 @@ function invoiceData(S, id) {
   const party = S.parties.find(p => p.id === d.partyId) || {};
   const prev = partyBalBefore(S, d.partyId, d);
   const eff = sum(S.pent.filter(e => e.ref === id && e.partyId === d.partyId), e => e.delta);
-  const items = d.items.map(i => { const p = S.products.find(x => x.id === i.pid) || {}; return { bn: i.bn || 0, bu: i.bu || '', bp: i.bp || 0, name: (p.name || '') + (i.gift ? ' (جایزه)' : i.bonus ? ' (+' + qtyS(i.bonus) + ' جایزه)' : ''), unit: p.unit || '', qty: i.qty, price: i.gift ? 0 : i.price, total: i.gross != null ? i.gross : i.total, disc: i.disc || 0 }; });
+  const items = d.items.map(i => { const p = S.products.find(x => x.id === i.pid) || {}; return { bn: i.bn || 0, bu: i.bu || '', bp: i.bp || 0, name: (p.name || '') + (i.gift ? ' (جایزه)' : i.bonus ? ' (+' + qtyS(i.bonus) + ' جایزه)' : ''), unit: p.unit || '', barcode: p.barcode || '', qty: i.qty, price: i.gift ? 0 : i.price, total: i.gross != null ? i.gross : i.total, disc: i.disc || 0 }; });
   const fInv = d.type === 'buy' ? (d.freightMode !== 'acct') : false;
   return { type: d.type, no: d.no, ts: d.ts, party: { name: party.name || '', mobile: party.mobile || '', address: party.address || '' }, items,
     qty: sum(d.items, i => i.qty), gross: d.gross != null ? d.gross : d.sub, disc: d.disc || 0, discMode: d.discMode || '', discVal: d.discVal || 0, sub: d.sub, tax: d.tax || 0, extra: d.extra || 0, freight: fInv ? (d.freight || 0) : 0, total: d.total,
@@ -4072,7 +4072,9 @@ async function officialCanvases(id) {
     }
     if (pg.a === pg.b && pn > 0) y = y1 - 6; else {
     /* ستون‌ها (راست به چپ) */
-    const cols = [['ردیف', 34], ['نام کالا', 190], ['مقدار', 62], ['واحد', 56], ['بهای واحد (' + cu + ')', 92], ['جمع مبلغ', 100], ['تخفیف', 80], ['مالیات', 80], ['مبلغ نهایی ردیف', 108]];
+    const hasBc = rows.some(r => r.it.barcode);
+    const cols = hasBc ? [['ردیف', 28], ['بارکد کالا', 92], ['نام کالا', 150], ['مقدار', 54], ['واحد', 48], ['بهای واحد (' + cu + ')', 86], ['جمع مبلغ', 92], ['تخفیف', 62], ['مالیات', 62], ['مبلغ نهایی ردیف', 128]] : [['ردیف', 34], ['نام کالا', 190], ['مقدار', 62], ['واحد', 56], ['بهای واحد (' + cu + ')', 92], ['جمع مبلغ', 100], ['تخفیف', 80], ['مالیات', 80], ['مبلغ نهایی ردیف', 108]];
+    const iN = hasBc ? 2 : 1;
     let x = R; const xs = cols.map(cl => { const r = x; x -= cl[1]; return [r, cl[1]]; });
     c.fillStyle = navy; c.fillRect(M, y, W - 2 * M, TH);
     cols.forEach((cl, i) => T(cl[0], xs[i][0] - xs[i][1] / 2, y + 15, { a: 'center', w: 600, s: 10, c: '#fff' }));
@@ -4080,9 +4082,9 @@ async function officialCanvases(id) {
     for (let i = pg.a; i < pg.b; i++) {
       const r = rows[i], it = r.it, ty = y + RH / 2 + 4;
       if ((i - pg.a) % 2) { c.fillStyle = '#f7f8fb'; c.fillRect(M, y, W - 2 * M, RH); }
-      const vals = [fa(i + 1), it.name, qf(it.bn || it.qty), it.bn ? it.bu : it.unit, money(it.bn ? it.bp : it.price), money(it.total), it.disc ? money(it.disc) : '۰', r.tx ? money(r.tx) : '۰', money(r.fin)];
-      vals.forEach((v, k) => { if (k === 1) { let s = v; while (Mz(s, { s: 11, w: 600 }) > xs[k][1] - 10 && s.length > 3) s = s.slice(0, -1); T(s + (s !== v ? '…' : ''), xs[k][0] - 6, ty, { s: 11, w: 600 }); } else T(v, xs[k][0] - xs[k][1] / 2, ty, { a: 'center', s: 11, w: k === 8 ? 700 : 400 }); });
-      if (it.bn) T('(' + qf(it.qty) + ' ' + it.unit + ')', xs[2][0] - xs[2][1] / 2, y + RH - 3, { a: 'center', s: 7.5, c: mut });
+      const vals = [fa(i + 1), ...(hasBc ? [it.barcode || '—'] : []), it.name, qf(it.bn || it.qty), it.bn ? it.bu : it.unit, money(it.bn ? it.bp : it.price), money(it.total), it.disc ? money(it.disc) : '۰', r.tx ? money(r.tx) : '۰', money(r.fin)];
+      vals.forEach((v, k) => { if (hasBc && k === 1) T(v, xs[k][0] - xs[k][1] / 2, ty, { a: 'center', s: 10, d: 'ltr' }); else if (k === iN) { let s = v; while (Mz(s, { s: 11, w: 600 }) > xs[k][1] - 10 && s.length > 3) s = s.slice(0, -1); T(s + (s !== v ? '…' : ''), xs[k][0] - 6, ty, { s: 11, w: 600 }); } else T(v, xs[k][0] - xs[k][1] / 2, ty, { a: 'center', s: 11, w: k === cols.length - 1 ? 700 : 400 }); });
+      if (it.bn) T('(' + qf(it.qty) + ' ' + it.unit + ')', xs[iN + 1][0] - xs[iN + 1][1] / 2, y + RH - 3, { a: 'center', s: 7.5, c: mut });
       LN(M, y + RH, R, y + RH, 0.4); y += RH;
     }
     /* خطوط عمودی */
