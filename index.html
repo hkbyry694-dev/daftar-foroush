@@ -3708,10 +3708,21 @@ function vrTehran(off) { const d = new Date(Date.now() + (off || 0) * 864e5), p 
 const vrDay = off => vrTehran(off).iso;
 const vrDayFa = iso => new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date(iso + 'T12:00:00Z'));
 /* ---- شبکه ---- */
-const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+const OVP = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://overpass.openstreetmap.fr/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+const vrSleep = ms => new Promise(r => setTimeout(r, ms));
+async function ovFetch(u, q, ms) {
+  const ac = new AbortController(), tm = setTimeout(() => ac.abort(), ms);
+  try { const r = await fetch(u, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ac.signal }); if (!r.ok) throw new Error('HTTP ' + r.status); const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('پاسخ نامعتبر'); }
+    if (!(j.elements || []).length && j.remark && /timed out|too many|runtime|rate/i.test(j.remark)) throw new Error('سرور شلوغ'); return j.elements || []; }
+  finally { clearTimeout(tm); }
+}
 async function overpass(q) {
-  let err; for (const u of OVP) { try { const r = await fetch(u, { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }); if (!r.ok) throw new Error('HTTP ' + r.status); const j = await r.json(); return j.elements || []; } catch (e) { err = e; } }
-  throw err || new Error('net');
+  const errs = [], order = OVP.slice(); if (vrUI.okMirror) { const i = order.indexOf(vrUI.okMirror); if (i > 0) { order.splice(i, 1); order.unshift(vrUI.okMirror); } }
+  for (let round = 0; round < 2; round++) {
+    for (const u of order) { try { const r = await ovFetch(u, q, 45000); vrUI.okMirror = u; return r; } catch (e) { errs.push(u.split('/')[2] + ': ' + (e && e.name === 'AbortError' ? 'زمان تمام شد' : (e && e.message === 'Failed to fetch' ? 'اتصال برقرار نشد' : (e && e.message) || 'خطا'))); } }
+    if (round === 0) await vrSleep(2000);
+  }
+  const err = new Error('ov'); err.detail = errs.slice(-5).join('\n'); throw err;
 }
 async function nominatim(q) { const r = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&accept-language=fa&addressdetails=0&q=' + encodeURIComponent(q)); if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }
 /* ---- هندسه ---- */
@@ -3746,7 +3757,18 @@ const vrActive = () => vrVisitors().filter(x => !x.off && x.claimed);
 A['go-vroute'] = () => { vrUI.page = openPage({ title: 'مسیر ویزیتورها', body: '<div id="vrb"></div>' }); vrUI.page.el._redraw = vrDraw; vrDraw(); if (sync.user) vrRefreshGates(); };
 async function vrRefreshGates() { try { const { fs, db } = sync.fb; const sn = await fs.getDocs(fs.collection(db, 'visitorGate')); cat.gates = {}; sn.forEach(d => { cat.gates[d.id] = d.data(); }); vrDraw(); } catch (e) {} }
 const vrChk = (a, t, on, id) => '<button class="chk tap' + (on ? ' on' : '') + '" data-a="' + a + '" data-id="' + esc(id == null ? '' : id) + '" style="margin-top:6px;padding:9px 12px;border-radius:var(--r-sm);background:var(--bg);width:100%"><span class="b">' + ico('check', 16) + '</span><span>' + t + '</span></button>';
-function vrDraw() {
+const vrNrm = t => String(t || '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[\u200c\u200f]/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+function vrRegList(R, q) {
+  const nq = vrNrm(q); let regs = R.regions.filter(r => !nq || vrNrm(r.name).includes(nq));
+  if (nq) regs.sort((a, b) => (vrNrm(b.name).startsWith(nq) - vrNrm(a.name).startsWith(nq)) || a.name.localeCompare(b.name, 'fa'));
+  return (nq ? '<div class="count">' + fa(regs.length) + ' نتیجه برای «' + esc(q.trim()) + '»</div>' + (regs.length ? '<button class="btn ghost tap" data-a="vr-selq" style="padding:8px;margin:4px 0 6px">انتخاب همه‌ی این ' + fa(regs.length) + ' نتیجه</button>' : '<div class="hint">منطقه‌ای با این نام پیدا نشد.</div>') : '') +
+    regs.slice(0, 300).map(r => vrChk('vr-tg', esc(r.name) + (R.last[r.id] ? ' <small class="mut">آخرین ویزیت ' + fdate(R.last[r.id]) + '</small>' : ''), R.sel[r.id], r.id)).join('');
+}
+function vrSelUpd() {
+  const pg = vrUI.page; if (!pg) return; const R = vrS(), n = R.regions.filter(r => R.sel[r.id]).length, c = $('#vrsc', pg.el); if (c) c.textContent = fa(n) + ' منطقه انتخاب‌شده';
+  const b = pg.el.querySelector('[data-a=vr-plan]'); if (b) b.disabled = !(vrActive().length && n); const e = $('#vrn', pg.el); if (e && !vrUI.n) e.value = fa(n);
+}
+function vrDraw0() {
   const pg = vrUI.page; if (!pg || !pg.el.isConnected) return; const b = $('#vrb', pg.el); if (!b) return; if (b.contains(document.activeElement) && document.activeElement.tagName === 'INPUT') return;
   const R = vrS(), vs = vrVisitors(), act = vrActive(), sel = R.regions.filter(r => R.sel[r.id]), q = vrUI.q.trim();
   const vrow = vs.map(x => '<div class="mrow"><span>' + esc(x.name) + ' <small class="mut" dir="ltr">' + esc(x.v.code) + '</small></span><b class="' + (x.off ? 'neg' : x.claimed ? 'pos' : 'mut') + '">' + (x.off ? 'غیرفعال' : x.claimed ? 'فعال' : x.pub ? 'منتظر ورود' : 'منتشر نشده') + '</b></div>').join('') || '<div class="hint">ویزیتوری ثبت نشده.</div>';
@@ -3754,14 +3776,19 @@ function vrDraw() {
   b.innerHTML = '<div class="box" style="margin-top:12px"><div class="mrow"><b>ویزیتورهای فعال: ' + fa(act.length) + ' از ' + fa(vs.length) + '</b></div>' + vrow + '<div class="hint">فعال = کد گرفته و رمز ساخته. ویزیتورهای حذف‌شده یا غیرفعال حساب نمی‌شوند.</div>' + (sync.user ? '' : '<div class="warn-note">برای انتشار مسیر، در «همگام‌سازی ابری» وارد حساب شو.</div>') + '</div>' +
     '<div class="box sec"><b>۱) شهر</b><div class="mrow" style="margin-top:6px"><span>' + (R.city ? esc(R.city.name) : '<span class="mut">انتخاب نشده</span>') + '</span><button class="smallbtn tap" data-a="vr-city" style="padding:6px 12px;border-radius:999px;background:var(--soft);color:var(--accent)">' + (R.city ? 'تغییر' : 'انتخاب شهر') + '</button></div></div>' +
     (R.city ? '<div class="box sec"><b>۲) مناطق (' + fa(R.regions.length) + ')</b><div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="vr-regs" style="padding:9px">دریافت مناطق از نقشه</button><button class="btn ghost tap" data-a="vr-grid" style="padding:9px">ساخت مناطق شبکه‌ای</button></div>' + (vrUI.busy === 'regs' ? '<div class="hint">در حال دریافت…</div>' : '') +
-      (R.regions.length ? '<div class="srow" style="margin-top:10px"><div class="search">' + ico('search', 20) + '<input data-in="vrq" placeholder="جستجوی منطقه" value="' + esc(vrUI.q) + '" autocomplete="off"></div></div><div class="boxes g2" style="margin-top:6px"><button class="btn ghost tap" data-a="vr-all" style="padding:8px">انتخاب همه</button><button class="btn ghost tap" data-a="vr-none" style="padding:8px">هیچ‌کدام</button></div><div class="count">' + fa(sel.length) + ' منطقه انتخاب‌شده</div><div style="max-height:260px;overflow:auto">' + regs.slice(0, 300).map(r => vrChk('vr-tg', esc(r.name) + (R.last[r.id] ? ' <small class="mut">آخرین ویزیت ' + fdate(R.last[r.id]) + '</small>' : ''), R.sel[r.id], r.id)).join('') + '</div>' : '<div class="hint">مناطق را از نقشه بگیر. اگر برای شهرت پیدا نشد، «مناطق شبکه‌ای» شهر را به بخش‌های ۱ کیلومتری تقسیم می‌کند.</div>') + '</div>' +
+      (R.regions.length ? '<div class="srow" style="margin-top:10px"><div class="search">' + ico('search', 20) + '<input data-in="vrq" placeholder="جستجوی منطقه" value="' + esc(vrUI.q) + '" autocomplete="off"></div></div><div class="boxes g2" style="margin-top:6px"><button class="btn ghost tap" data-a="vr-all" style="padding:8px">انتخاب همه</button><button class="btn ghost tap" data-a="vr-none" style="padding:8px">هیچ‌کدام</button></div><div class="count" id="vrsc">' + fa(sel.length) + ' منطقه انتخاب‌شده</div><div id="vrrl" style="max-height:300px;overflow:auto">' + vrRegList(R, q) + '</div>' : '<div class="hint">مناطق را از نقشه بگیر. اگر برای شهرت پیدا نشد، «مناطق شبکه‌ای» شهر را به بخش‌های ۱ کیلومتری تقسیم می‌کند.</div>') + '</div>' +
       '<div class="box sec"><b>۳) نوع فروشگاه و برد جستجو</b>' + Object.keys(VR_CATS).map(k => vrChk('vr-cat', VR_CATS[k][0], R.cats.includes(k), k)).join('') + '<div class="f"><label>شعاع جستجو دور مرکز هر منطقه</label><div style="padding-top:8px">' + chipsH('vrr', [['500', '۵۰۰ متر'], ['800', '۸۰۰ متر'], ['1200', '۱٫۲ کیلومتر'], ['2000', '۲ کیلومتر']], String(R.radius)) + '</div></div>' + field('حداکثر فروشگاه برای هر ویزیتور در روز', 'vrmx', fa(R.max), { num: 1 }).replace('<input', '<input data-in="vrmx"') + '</div>' +
       '<div class="box sec"><b>۴) برنامهٔ روز</b><div class="f"><label>برای چه روزی؟</label><div style="padding-top:8px">' + chipsH('vrd', [['0', 'امروز'], ['1', 'فردا'], ['2', 'پس‌فردا']], String(vrUI.day)) + '</div></div><div class="hint">' + vrDayFa(vrDay(vrUI.day)) + ' — ویزیتورها مسیر هر روز را از ساعت ۶ صبح می‌بینند.</div>' +
-      field('چند منطقه برای این روز فعال شود؟', 'vrn', fa(vrUI.n || sel.length), { num: 1 }).replace('<input', '<input data-in="vrn"') + '<div class="hint">اگر کمتر از انتخاب‌شده‌ها بدهی، مناطقی که دیرتر ویزیت شده‌اند اولویت دارند.</div><button class="btn tap" style="margin-top:10px" data-a="vr-plan"' + (act.length && sel.length ? '' : ' disabled') + '>' + (vrUI.busy === 'plan' ? 'در حال ساخت…' : 'دریافت فروشگاه‌ها و تقسیم بین ویزیتورها') + '</button>' + (act.length ? '' : '<div class="warn-note">ویزیتور فعالی نیست.</div>') + '</div>' : '') + vrPlanH() + '<div class="box sec"><b>پیشرفت ویزیتورها</b><div class="hint">بازدیدهای ثبت‌شده توسط ویزیتورها برای ' + vrDayFa(vrDay(vrUI.day)) + '.</div><button class="btn ghost tap" data-a="vr-prog" style="margin-top:8px">به‌روزرسانی پیشرفت</button><div id="vrp">' + vrProgH() + '</div></div>';
+      field('چند منطقه برای این روز فعال شود؟', 'vrn', fa(vrUI.n || sel.length), { num: 1 }).replace('<input', '<input data-in="vrn"') + '<div class="hint">اگر کمتر از انتخاب‌شده‌ها بدهی، مناطقی که دیرتر ویزیت شده‌اند اولویت دارند.</div><button class="btn tap" style="margin-top:10px" data-a="vr-plan"' + (act.length && sel.length ? '' : ' disabled') + '>' + (vrUI.busy === 'plan' ? (vrUI.prog2 || 'در حال ساخت…') : 'دریافت فروشگاه‌ها و تقسیم بین ویزیتورها') + '</button>' + (act.length ? '' : '<div class="warn-note">ویزیتور فعالی نیست.</div>') + '</div>' : '') + vrPlanH() + '<div class="box sec"><b>پیشرفت ویزیتورها</b><div class="hint">بازدیدهای ثبت‌شده توسط ویزیتورها برای ' + vrDayFa(vrDay(vrUI.day)) + '.</div><button class="btn ghost tap" data-a="vr-prog" style="margin-top:8px">به‌روزرسانی پیشرفت</button><div id="vrp">' + vrProgH() + '</div></div>';
 }
-I.vrq = t => { vrUI.q = t.value; vrDraw(); }; I.vrn = t => { vrUI.n = Math.max(0, Math.round(num(t.value))); }; I.vrmx = t => { vrS().max = Math.max(5, Math.round(num(t.value)) || 40); save(); };
+function vrDraw() {
+  const pg = vrUI.page; if (!pg || !pg.el.isConnected) return; const pb = pg.el.querySelector('.pbody'), st = pb ? pb.scrollTop : 0, l0 = $('#vrrl', pg.el), ls = l0 ? l0.scrollTop : 0;
+  vrDraw0(); if (pb) pb.scrollTop = st; const l1 = $('#vrrl', pg.el); if (l1) l1.scrollTop = ls;
+}
+I.vrq = t => { vrUI.q = t.value; const el = $('#vrrl'); if (el) el.innerHTML = vrRegList(vrS(), vrUI.q); }; I.vrn = t => { vrUI.n = Math.max(0, Math.round(num(t.value))); }; I.vrmx = t => { vrS().max = Math.max(5, Math.round(num(t.value)) || 40); save(); };
 chipH.vrr = v => { vrS().radius = +v; save(); }; chipH.vrd = v => { vrUI.day = +v; vrUI.plan = null; vrDraw(); };
-A['vr-tg'] = t => { const R = vrS(), id = t.dataset.id; R.sel[id] = !R.sel[id]; save(); vrDraw(); };
+A['vr-tg'] = t => { const R = vrS(), id = t.dataset.id; R.sel[id] = !R.sel[id]; save(); t.classList.toggle('on', !!R.sel[id]); vrSelUpd(); };
+A['vr-selq'] = () => { const R = vrS(), nq = vrNrm(vrUI.q); R.regions.forEach(r => { if (vrNrm(r.name).includes(nq)) R.sel[r.id] = 1; }); save(); const el = $('#vrrl'); if (el) el.innerHTML = vrRegList(R, vrUI.q); vrSelUpd(); toast('نتیجه‌های جستجو انتخاب شد.'); };
 A['vr-all'] = () => { const R = vrS(); R.regions.forEach(r => { R.sel[r.id] = 1; }); save(); vrDraw(); }; A['vr-none'] = () => { vrS().sel = {}; save(); vrDraw(); };
 A['vr-cat'] = t => { const R = vrS(), k = t.dataset.id; R.cats = R.cats.includes(k) ? R.cats.filter(x => x !== k) : R.cats.concat(k); save(); vrDraw(); };
 /* شهر */
@@ -3776,7 +3803,7 @@ A['vr-regs'] = async () => {
     const els = await overpass(q), seen = new Set(), out = [];
     els.forEach(e => { const nm = (e.tags && (e.tags['name:fa'] || e.tags.name || '')).trim(), p = e.type === 'node' ? e : e.center; if (!nm || !p || seen.has(nm)) return; seen.add(nm); out.push({ id: e.type[0] + e.id, name: nm, lat: p.lat, lng: p.lon }); });
     out.sort((a, b) => a.name.localeCompare(b.name, 'fa')); R.regions = out; R.sel = {}; save(); toast(out.length ? fa(out.length) + ' منطقه پیدا شد' : 'منطقه‌ای پیدا نشد؛ «مناطق شبکه‌ای» را امتحان کن.', !out.length);
-  } catch (e) { toast('دریافت از نقشه ممکن نشد (اینترنت یا فیلترشکن).', 1); }
+  } catch (e) { vrNetFail(e, 'دریافت مناطق از نقشه ممکن نشد', 'vr-regs'); }
   vrUI.busy = ''; vrDraw();
 };
 A['vr-grid'] = () => { const R = vrS(), c = R.city, bb = c.bb && c.bb.length === 4 ? c.bb : [c.lat - .05, c.lat + .05, c.lng - .06, c.lng + .06], step = 1 / 111.32, out = []; let n = 0; for (let la = bb[0]; la < bb[1]; la += step) for (let ln = bb[2]; ln < bb[3]; ln += step / Math.cos(la * Math.PI / 180)) { n++; out.push({ id: 'g' + n, name: 'بخش ' + fa(n), lat: +(la + step / 2).toFixed(5), lng: +(ln + step / 2).toFixed(5) }); } if (out.length > 400) return toast('شهر خیلی بزرگ است؛ از «دریافت مناطق از نقشه» استفاده کن.', 1); R.regions = out; R.sel = {}; save(); toast(fa(out.length) + ' بخش ساخته شد'); vrDraw(); };
@@ -3784,13 +3811,26 @@ A['vr-grid'] = () => { const R = vrS(), c = R.city, bb = c.bb && c.bb.length ===
 function vrTags(cats) { const m = {}; cats.forEach(k => { const t = VR_CATS[k][1]; Object.keys(t).forEach(key => { m[key] = (m[key] || []).concat(t[key]); }); }); return m; }
 async function vrShops(regs, radius, cats) {
   const tg = vrTags(cats), keys = Object.keys(tg), seen = new Map();
-  for (let i = 0; i < regs.length; i += 6) {
-    const part = regs.slice(i, i + 6); let q = '[out:json][timeout:60];('; part.forEach(r => { keys.forEach(k => { q += 'nwr["' + k + '"~"^(' + tg[k].join('|') + ')$"](around:' + radius + ',' + r.lat + ',' + r.lng + ');'; }); }); q += ');out center tags;';
-    const els = await overpass(q); els.forEach(e => { const p = e.type === 'node' ? e : e.center; if (!p) return; const id = e.type[0] + e.id; if (seen.has(id)) return; const t = e.tags || {}, ty = t.shop || t.amenity; let br = part[0], bd = 1e9; part.forEach(r => { const d = vrD({ lat: p.lat, lng: p.lon }, r); if (d < bd) { bd = d; br = r; } }); seen.set(id, { id, name: (t['name:fa'] || t.name || (VR_TYPE[ty] || 'فروشگاه') + ' (بدون نام)'), type: VR_TYPE[ty] || ty, lat: +p.lat.toFixed(6), lng: +p.lon.toFixed(6), addr: [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(' '), tel: t.phone || t['contact:phone'] || '', rid: br.id, rn: br.name, d: bd }); });
+  vrUI.cache = vrUI.cache || {};
+  for (let i = 0; i < regs.length; i += 3) {
+    const part = regs.slice(i, i + 3); vrUI.prog2 = 'دریافت فروشگاه‌ها: بخش ' + fa(Math.floor(i / 3) + 1) + ' از ' + fa(Math.ceil(regs.length / 3)); if (typeof vrDraw === 'function') vrDraw(); let q = '[out:json][timeout:30];('; part.forEach(r => { keys.forEach(k => { q += 'nwr["' + k + '"~"^(' + tg[k].join('|') + ')$"](around:' + radius + ',' + r.lat + ',' + r.lng + ');'; }); }); q += ');out center tags;';
+    const els = vrUI.cache[q] || (vrUI.cache[q] = await overpass(q)); els.forEach(e => { const p = e.type === 'node' ? e : e.center; if (!p) return; const id = e.type[0] + e.id; if (seen.has(id)) return; const t = e.tags || {}, ty = t.shop || t.amenity; let br = part[0], bd = 1e9; part.forEach(r => { const d = vrD({ lat: p.lat, lng: p.lon }, r); if (d < bd) { bd = d; br = r; } }); seen.set(id, { id, name: (t['name:fa'] || t.name || (VR_TYPE[ty] || 'فروشگاه') + ' (بدون نام)'), type: VR_TYPE[ty] || ty, lat: +p.lat.toFixed(6), lng: +p.lon.toFixed(6), addr: [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(' '), tel: t.phone || t['contact:phone'] || '', rid: br.id, rn: br.name, d: bd }); });
   }
   const all = [...seen.values()], byR = {}; /* هر فروشگاه فقط به نزدیک‌ترین منطقه از بین همهٔ مناطق انتخابی */
   all.forEach(s => { let br = regs[0], bd = 1e9; regs.forEach(r => { const d = vrD(s, r); if (d < bd) { bd = d; br = r; } }); s.rid = br.id; s.rn = br.name; (byR[br.id] = byR[br.id] || []).push(s); }); return byR;
 }
+function vrNetFail(e, title, retry, canRegion) {
+  const d = (e && e.detail) || (e && e.message) || '';
+  openSheet('<h3 class="st">' + title + '</h3><div class="hint">سرورهای نقشه (Overpass) جواب ندادند. این سرورها گاهی شلوغ‌اند یا از بعضی شبکه‌ها و فیلترشکن‌ها بسته می‌شوند. دوباره تلاش کن؛ بخش‌هایی که قبلاً گرفته شده دوباره دانلود نمی‌شود.</div>' + (d ? '<div class="hint" dir="ltr" style="white-space:pre-line;font-size:11px;text-align:left">' + esc(d) + '</div>' : '') +
+    '<div class="pr"><button class="btn tap" data-a="vr-retry" data-r="' + retry + '">دوباره تلاش</button>' + (canRegion ? '<button class="btn ghost tap" data-a="vr-reg-only">ادامه بدون فروشگاه (هر منطقه یک ایستگاه)</button>' : '') + '<button class="btn ghost tap" data-a="sclose">بستن</button></div>');
+}
+A['vr-retry'] = t => { const r = t.dataset.r; closeSheet(t.closest('.sw')); if (A[r]) A[r](); };
+A['vr-reg-only'] = t => {
+  closeSheet(t.closest('.sw')); const R = vrS(), act = vrActive(), use = vrUI.use || R.regions.filter(r => R.sel[r.id]); if (!act.length || !use.length) return;
+  const pts = use.map(r => ({ id: r.id, name: r.name, lat: r.lat, lng: r.lng, w: 1 })), lb = vrKmeans(pts, Math.min(act.length, pts.length)), assign = {}, byR = {};
+  pts.forEach((p, i) => { assign[p.id] = act[lb[i]].code; byR[p.id] = [{ id: 'r' + p.id, name: 'منطقه ' + p.name, type: 'منطقه', lat: p.lat, lng: p.lng, addr: 'فروشگاه‌های این منطقه را خودتان ویزیت کنید', tel: '', rn: p.name }]; });
+  vrUI.plan = { day: vrDay(vrUI.day), regs: pts.map(p => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng })), byR, assign, at: Date.now(), pub: false, regionOnly: true }; vrBuildStops(vrUI.plan); vrDraw(); toast('برنامه‌ی منطقه‌ای ساخته شد؛ می‌توانی منتشرش کنی.');
+};
 A['vr-plan'] = async () => {
   const R = vrS(), act = vrActive(), sel = R.regions.filter(r => R.sel[r.id]); if (!act.length || !sel.length) return;
   let n = vrUI.n > 0 ? Math.min(vrUI.n, sel.length) : sel.length; const use = sel.slice().sort((a, b) => (R.last[a.id] || 0) - (R.last[b.id] || 0)).slice(0, n);
@@ -3800,8 +3840,8 @@ A['vr-plan'] = async () => {
     if (!pts.length) { vrUI.busy = ''; vrDraw(); return toast('در این مناطق فروشگاهی پیدا نشد. شعاع یا نوع فروشگاه را بیشتر کن.', 1); }
     const lb = vrKmeans(pts, Math.min(act.length, pts.length)), assign = {}; pts.forEach((p, i) => { assign[p.id] = act[lb[i]].code; });
     vrUI.plan = { day: vrDay(vrUI.day), regs: pts.map(p => ({ id: p.id, name: p.name, lat: p.lat, lng: p.lng })), byR, assign, at: Date.now(), pub: false }; vrBuildStops(vrUI.plan);
-  } catch (e) { toast('دریافت فروشگاه‌ها ممکن نشد (اینترنت یا فیلترشکن).', 1); }
-  vrUI.busy = ''; vrDraw();
+  } catch (e) { vrUI.use = use; vrNetFail(e, 'دریافت فروشگاه‌ها ممکن نشد', 'vr-plan', true); }
+  vrUI.busy = ''; vrUI.prog2 = ''; vrDraw();
 };
 function vrBuildStops(pl) { const R = vrS(), act = vrActive(); pl.stops = {}; act.forEach(a => { let ss = []; pl.regs.forEach(r => { if (pl.assign[r.id] === a.code) ss = ss.concat(byRSafe(pl, r.id)); }); ss = vrTour(ss); if (ss.length > R.max) ss = ss.slice(0, R.max); pl.stops[a.code] = ss.map(s => ({ id: s.id, name: s.name, type: s.type, lat: s.lat, lng: s.lng, addr: s.addr || '', tel: s.tel || '', rn: s.rn })); }); }
 const byRSafe = (pl, id) => (pl.byR && pl.byR[id]) || [];
