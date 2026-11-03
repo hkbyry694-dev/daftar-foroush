@@ -754,7 +754,7 @@ function addSale(S, d, editId) {
     if (d.payType !== 'credit') s.txns.push({ id: uid(), ref: id, ts, accountId: d.accountId, amount: pv.total });
     else s.pent.push({ id: uid(), ref: id, ts, partyId: d.partyId, delta: pv.total });
     for (const sh of pv.shares) s.partE.push({ id: uid(), ref: id, ts, partnerId: sh.partnerId, amount: sh.amount, kind: 'share' });
-    if (d.visitorId && pv.visitorComm) s.visE.push({ id: uid(), ref: id, ts, visitorId: d.visitorId, amount: pv.visitorComm, kind: 'commission' });
+    if (d.visitorId && pv.visitorComm) s.visE.push({ id: uid(), ref: id, ts, visitorId: d.visitorId, amount: pv.visitorComm, kind: 'commission', src: { p: Object.fromEntries(pv.shares.filter(x => x.vcut > 0).map(x => [x.partnerId, x.vcut])), o: Math.max(0, pv.visitorComm - pv.shares.reduce((a, x) => a + (x.vcut || 0), 0)) } });
     return doc;
   });
 }
@@ -1068,7 +1068,18 @@ function addVisitorPay(S, d) {
     const id = uid(), seq = nextSeq(s);
     s.docs.push({ id, seq, type: 'vpay', ts: d.ts, ledgerId: d.ledgerId, visitorId: d.visitorId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: -amount });
-    s.visE.push({ id: uid(), ref: id, ts: d.ts, visitorId: d.visitorId, amount: -amount, kind: 'payment' });
+    /* منبع پرداخت: به نسبت سهمی که هر منبع (شما / هر شریک) از پورسانت‌های ثبت‌شده‌ی این ویزیتور تحمل کرده و هنوز پرداخت نشده */
+    const rem = { o: 0 };
+    for (const e of s.visE) if (e.visitorId === d.visitorId && e.src) {
+      const k = e.kind === 'payment' ? -1 : 1;
+      rem.o += k * (e.src.o || 0);
+      for (const [pid, v] of Object.entries(e.src.p || {})) rem[pid] = (rem[pid] || 0) + k * v;
+    }
+    const keys = Object.keys(rem).filter(k => rem[k] > 0), T = keys.reduce((a, k) => a + rem[k], 0), src = { o: 0, p: {} };
+    if (T > 0) { let left = amount; keys.forEach((k, i) => { const x = i === keys.length - 1 ? left : R(amount * rem[k] / T); left -= x; if (k === 'o') src.o = x; else src.p[k] = x; }); } else src.o = amount;
+    s.docs.find(x => x.id === id).src = src;
+    s.visE.push({ id: uid(), ref: id, ts: d.ts, visitorId: d.visitorId, amount: -amount, kind: 'payment', src });
+    for (const [pid, v] of Object.entries(src.p)) if (v > 0) s.partE.push({ id: uid(), ref: id, ts: d.ts, partnerId: pid, amount: 0, kind: 'vcomm', part: v });
     return id;
   });
 }
@@ -2580,7 +2591,7 @@ function openPartner(id) {
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب شریک</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع سهم سود</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + modeText(pr) + '</div>' +
       '<div class="sec"><div class="mrow"><h3 style="margin:0">سود هر محصول</h3><button class="pill tap" data-a="prt-list">تعیین / ویرایش</button></div>' + ((pr.rates || []).length ? '<div class="list">' + pr.rates.map(r => rowH({ a: 'prt-edit', id: r.pid, title: (prod(r.pid) || {}).name || '', sub: shareText(r), icon: 'box' })).join('') + '</div>' : '<div class="hint">برای محصولی که سود جدا دارد، مقدار را اینجا تعیین کن؛ موقع فروش خودکار پیشنهاد می‌شود.</div>') + '</div>' +
-      agentGallery('partnerId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'share' ? 'سهم از فروش ' + fa(d ? d.no : '') : e.kind === 'return' ? 'برگشت سهم (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: e.kind === 'share' ? 'tag' : e.kind === 'return' ? 'undo' : 'out', av: e.kind === 'share' ? 'green' : 'amber', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'share' ? 'pos' : 'neg') }); }).join('') || empty('هنوز سهمی ثبت نشده')) + '</div>';
+      agentGallery('partnerId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'share' ? 'سهم از فروش ' + fa(d ? d.no : '') : e.kind === 'return' ? 'برگشت سهم (مرجوعی)' : e.kind === 'vcomm' ? 'پرداخت پورسانت ویزیتور از سهم شما: ' + mu(e.part) : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: e.kind === 'share' ? 'tag' : e.kind === 'return' ? 'undo' : 'out', av: e.kind === 'share' ? 'green' : 'amber', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'share' ? 'pos' : 'neg') }); }).join('') || empty('هنوز سهمی ثبت نشده')) + '</div>';
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pa-pay">ثبت پرداخت به شریک</button><button class="btn ghost tap" data-a="pa-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="pa-edit">ویرایش</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
@@ -2648,7 +2659,7 @@ function openVisitor(id) {
     const es = S.visE.filter(e => e.visitorId === id).sort((a, b) => b.ts - a.ts), earned = es.filter(e => e.kind !== 'payment').reduce((s, e) => s + e.amount, 0), paid = -es.filter(e => e.kind === 'payment').reduce((s, e) => s + e.amount, 0), b = earned - paid;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">مانده‌ی حساب ویزیتور</div><div style="font-size:20px;font-weight:700" class="' + (b > 0 ? 'neg' : '') + '">' + mu(Math.abs(b)) + ' <small style="font-size:13px">' + (b > 0 ? 'بدهکارم' : b < 0 ? 'اضافه پرداخت' : 'تسویه') + '</small></div></div>' +
       '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>جمع پورسانت و حقوق</small><b>' + mu(earned) + '</b></div><div class="cell"><small>جمع پرداختی</small><b>' + mu(paid) + '</b></div></div><div class="hint">' + vText(v) + '</div>' +
-      (typeof visLoginBox==='function'?visLoginBox(v):'') + agentGallery('visitorId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
+      (typeof visLoginBox==='function'?visLoginBox(v):'') + agentGallery('visitorId', id) + '<div class="count">' + fa(es.length) + ' ردیف</div><div class="list">' + (es.map(e => { const d = S.docs.find(x => x.id === e.ref); return rowH({ a: 'doc', id: e.ref, title: e.kind === 'commission' ? 'پورسانت فروش ' + fa(d ? d.no : '') : e.kind === 'salary' ? 'حقوق' : e.kind === 'return' ? 'برگشت پورسانت (مرجوعی)' : 'پرداخت', sub: fdate(e.ts) + ' ' + ftime(e.ts) + (e.kind === 'payment' && e.src ? ' • از ' + [e.src.o > 0 ? 'سود شما: ' + mu(e.src.o) : ''].concat(Object.entries(e.src.p || {}).filter(x => x[1] > 0).map(x => 'سود ' + ((partner(x[0]) || {}).name || 'شریک') + ': ' + mu(x[1]))).filter(Boolean).join('، ') : ''), icon: 'brief', av: e.kind === 'payment' || e.kind === 'return' ? 'amber' : 'green', end: endH(mu(Math.abs(e.amount)), '', e.kind === 'payment' || e.kind === 'return' ? 'neg' : 'pos') }); }).join('') || empty('هنوز ردیفی نیست')) + '</div>';
   };
   const v0 = visitor(id), sal = v0.mode === 'monthly' || v0.mode === 'weekly';
   const p = openPage({ title: '', body: '', foot: (sal ? '<button class="btn ghost tap" data-a="va-sal">ثبت حقوق دوره</button>' : '') + '<button class="btn tap" data-a="va-pay">ثبت پرداخت</button><button class="btn ghost tap" data-a="vi-rep">' + ico('file', 18) + 'گزارش و صورت‌حساب</button><button class="btn ghost tap" data-a="va-edit">ویرایش</button>' });
@@ -3855,12 +3866,12 @@ A['vr-pub'] = async () => {
   const pl = vrUI.plan, R = vrS(); if (!pl) return; if (!sync.user || !sync.fb) return toast('اول در «همگام‌سازی ابری» وارد حساب شو.', 1);
   try {
     const { fs, db } = sync.fb;
-    for (const a of vrActive()) { const stops = pl.stops[a.code] || []; await fs.setDoc(fs.doc(db, 'routes', pl.day + '_' + a.code), { day: pl.day, code: a.code, name: a.name, stops, regions: pl.regs.filter(r => pl.assign[r.id] === a.code).map(r => r.name), done: {}, at: Date.now() }); }
+    for (const a of vrActive()) { const stops = pl.stops[a.code] || []; await fs.setDoc(fs.doc(db, 'routes', pl.day + '_' + a.code), { day: pl.day, code: a.code, name: a.name, stops: [], regions: pl.regs.filter(r => pl.assign[r.id] === a.code).map(r => r.name), rlist: pl.regs.filter(r => pl.assign[r.id] === a.code).map(r => ({ id: String(r.id), name: r.name })), rdone: {}, done: {}, at: Date.now() }); }
     pl.regs.forEach(r => { R.last[r.id] = Date.parse(pl.day + 'T09:00:00Z'); }); pl.pub = true; pl.pubAt = Date.now(); R.plans[pl.day] = { day: pl.day, assign: pl.assign, at: pl.at }; save(); toast('مسیرها برای ویزیتورها منتشر شد'); vrDraw();
   } catch (e) { toast('انتشار ممکن نشد: ' + errFa(e), 1); }
 };
 /* پیشرفت */
-const vrProgH = () => { const p = vrUI.prog; if (!p) return ''; return p.length ? p.map(x => { const dn = Object.keys(x.done || {}).length, tot = (x.stops || []).length; return '<div class="mrow" style="margin-top:8px"><span>' + esc(x.name || x.code) + '</span><b>' + fa(dn) + ' از ' + fa(tot) + '</b></div><div style="height:6px;border-radius:6px;background:var(--soft)"><div style="height:6px;border-radius:6px;background:var(--accent);width:' + (tot ? Math.round(dn / tot * 100) : 0) + '%"></div></div><div class="hint">' + fa(Object.values(x.done || {}).filter(d => d.res === 'order').length) + ' سفارش • ' + fa(Object.values(x.done || {}).filter(d => d.res === 'closed' || d.res === 'no').length) + ' بسته/بی‌علاقه</div>'; }).join('') : '<div class="hint">برای این روز مسیری منتشر نشده.</div>'; };
+const vrProgH = () => { const p = vrUI.prog; if (!p) return ''; return p.length ? p.map(x => { if (x.rlist) { const rd = x.rdone || {}, n = x.rlist.filter(r => rd[r.id]).length; return '<div class="mrow" style="margin-top:8px"><span>' + esc(x.name || x.code) + '</span><b>' + fa(n) + ' از ' + fa(x.rlist.length) + ' منطقه</b></div>' + x.rlist.map(r => '<div class="mrow"><span>' + esc(r.name) + '</span><span class="pill ' + (rd[r.id] ? 'confirmed' : 'cancel') + '">' + (rd[r.id] ? 'رفت ✓' : 'نرفته (فردا یادآوری می‌شود)') + '</span></div>').join(''); } const dn = Object.keys(x.done || {}).length, tot = (x.stops || []).length; return '<div class="mrow" style="margin-top:8px"><span>' + esc(x.name || x.code) + '</span><b>' + fa(dn) + ' از ' + fa(tot) + '</b></div><div style="height:6px;border-radius:6px;background:var(--soft)"><div style="height:6px;border-radius:6px;background:var(--accent);width:' + (tot ? Math.round(dn / tot * 100) : 0) + '%"></div></div><div class="hint">' + fa(Object.values(x.done || {}).filter(d => d.res === 'order').length) + ' سفارش • ' + fa(Object.values(x.done || {}).filter(d => d.res === 'closed' || d.res === 'no').length) + ' بسته/بی‌علاقه</div>'; }).join('') : '<div class="hint">برای این روز مسیری منتشر نشده.</div>'; };
 A['vr-prog'] = async () => { if (!sync.user || !sync.fb) return toast('اول وارد حساب شو.', 1); try { const { fs, db } = sync.fb, sn = await fs.getDocs(fs.collection(db, 'routes')), day = vrDay(vrUI.day), r = []; sn.forEach(d => { if (d.id.startsWith(day + '_')) r.push(d.data()); }); vrUI.prog = r; vrDraw(); } catch (e) { toast('دریافت نشد: ' + errFa(e), 1); } };
 
 /* ===== نسخه ۳: پروفایل، فاکتور تصویری، گزارش اکسل/چاپ، مرجوعی، مرتب‌سازی ===== */
