@@ -1956,7 +1956,7 @@ const MOKW = { anbar: 'انبارگردان شمارش pda بارکد برچسب
 const moN = t => String(t || '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[\u200c\u200f]/g, ' ').toLowerCase();
 let moQ = '';
 function moItems() {
-  return [['anbar', 'check', 'انبارگردان (فایل)', 'کالاها را برای اپ انبارگردان بفرست و نتیجه‌ی شمارش را وارد کن'], ['today', 'calendar', 'امروز', 'فروش و سود امروز، سررسیدها و کارهای مهم'], ['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['pinv', 'file', 'پیش‌فاکتورها', 'صدور پیش‌فاکتور قبل از ارسال بار'], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس، قیمت، تاریخ تولید و انقضا برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'تم روز و شب، قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  return [['sms', 'note', 'قالب‌های پیامک و فاکتور متنی', 'نام شرکت، متن خوش‌آمدگویی و تشکر، اعتبار پیش‌فاکتور'], ['anbar', 'check', 'انبارگردان (فایل)', 'کالاها را برای اپ انبارگردان بفرست و نتیجه‌ی شمارش را وارد کن'], ['today', 'calendar', 'امروز', 'فروش و سود امروز، سررسیدها و کارهای مهم'], ['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['pinv', 'file', 'پیش‌فاکتورها', 'صدور پیش‌فاکتور قبل از ارسال بار'], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس، قیمت، تاریخ تولید و انقضا برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'تم روز و شب، قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
 }
 function moList() {
   const all = moItems(), q = moN(moQ).trim(); let items = all, note = '';
@@ -2088,7 +2088,7 @@ function openParty(id) {
     p.el.querySelector('h2').textContent = pt.name;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">وضعیت</div><div style="font-size:20px;font-weight:700" class="' + b.c + '">' + (b.amt || 'تسویه') + ' <small style="font-size:13px">' + (b.amt ? b.t : '') + '</small>' + (b.t === 'بستانکار' ? '<div class="hint pos">مبلغ بیشتری از او دریافت شده؛ باید کالا بفروشی یا پولش را برگردانی.</div>' : '') + '</div>' +
       '<div class="boxes g2" style="margin-top:8px"><button class="btn tap" data-a="pp-sale">' + ico('tag', 20) + 'فروش</button><button class="btn tap" data-a="pp-buy">' + ico('cart', 20) + 'خرید</button><button class="btn ghost tap" data-a="pp-rec">پول گرفتم</button><button class="btn ghost tap" data-a="pp-pay">پول دادم</button></div><button class="btn ghost tap" data-a="pp-ret" style="margin-top:8px">' + ico('undo', 20) + 'مرجوعی (فروش یا خرید)</button>' +
-      '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button></div>' + partyInfoH(pt) +
+      '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button><button class="btn ghost tap" data-a="pp-sms">' + ico('note', 18) + 'پیامک</button></div>' + partyInfoH(pt) +
       (pt.mobile || pt.address ? '<div class="boxes g2" style="margin-top:8px">' + (pt.mobile ? '<div class="cell"><small>موبایل</small><b>' + esc(pt.mobile) + '</b></div>' : '') + (pt.address ? '<div class="cell"><small>آدرس</small><b>' + esc(pt.address) + '</b></div>' : '') + '</div>' : '') +
       partyGallery(id) + crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('تراکنشی نیست'));
   };
@@ -2260,7 +2260,7 @@ function openInvoice(kind, o) {
   if (o.proforma) { preRec = o.editPre && pinvList().find(x => x.id === o.editPre); if (preRec) Object.assign(d, JSON.parse(JSON.stringify(preRec.d))); d.pre = true; d.payType = 'credit'; d.accountId = ''; }
   inv = { kind, pro: !!o.proforma, editPre: o.editPre || null, preId: o.pre ? o.pre.id : null, editId: o.editId || null, d, no: o.proforma ? (preRec ? preRec.no : (S.settings.nextPre || 1)) : edit ? edit.no : (kind === 'sale' ? S.settings.nextSale : S.settings.nextBuy) };
   cf = d;
-  inv.page = openPage({ title: o.proforma ? 'پیش‌فاکتور' + (preRec ? ' (ویرایش)' : '') : (kind === 'sale' ? 'فروش' : 'خرید') + (edit ? ' (ویرایش)' : ''), cls: kind, body: invBody(), foot: '<button class="btn tap" data-a="' + (o.proforma ? 'inv-savepre' : 'inv-save') + '">' + (o.proforma ? 'ثبت پیش‌فاکتور' : 'ثبت') + '</button>' });
+  inv.page = openPage({ title: o.proforma ? 'پیش‌فاکتور' + (preRec ? ' (ویرایش)' : '') : (kind === 'sale' ? 'فروش' : 'خرید') + (edit ? ' (ویرایش)' : ''), cls: kind, body: invBody(), foot: '<button class="btn tap" data-a="' + (o.proforma ? 'inv-savepre' : 'inv-save') + '">' + (o.proforma ? 'ثبت پیش‌فاکتور' : 'ثبت') + '</button>' + (kind === 'sale' && !o.proforma && !edit ? '<button class="btn ghost tap" data-a="inv-savepre">پیش‌فاکتور (بدون اثر در حساب)</button>' : '') });
   invUpd(); proHide();
 }
 chipH.pay = v => { inv.d.payType = v; const dw = $('#duew'); if (dw) dw.hidden = v !== 'credit'; setTimeout(invUpd, 0); const a = $('#accw'); if (a) a.hidden = v === 'credit'; if (v !== 'credit') { inv.d.accountId = defAcct(v); const sel = $('#iac'); if (sel) sel.value = inv.d.accountId; } };
@@ -4285,7 +4285,7 @@ function ivDoc(id) { return id && typeof id === 'object' ? id : S.docs.find(x =>
 function openInvoiceView(id) {
   const d = ivDoc(id), canOff = d && (d.type === 'sale' || d.type === 'buy');
   const p = openPage({ title: d && d.pre ? 'پیش‌فاکتور' : 'فاکتور', body: (canOff ? '<div class="chips ivc" style="padding:12px 16px 0"><button class="chip tap ivm on" data-a="iv-mode" data-m="inf">فاکتور غیررسمی</button><button class="chip tap ivm" data-a="iv-mode" data-m="off">فاکتور رسمی (A4 افقی)</button>' + (d && d.type === 'sale' && !d.pre ? '<button class="chip tap ivm" data-a="iv-mode" data-m="tax">فاکتور مودیان</button>' : '') + '</div><div id="invtx" style="display:none;padding:10px 16px 0"><div class="txw"></div><button class="btn ghost tap" data-a="iv-tax">ویرایش اطلاعات مودیان (شناسه‌ها و کدها)</button></div>' : '') + '<div class="invv" id="invv"></div>',
-    foot: '<button class="btn tap" data-a="iv-print">' + ico('print', 18) + 'چاپ / PDF</button><button class="btn ghost tap" data-a="iv-img">' + ico('image', 18) + 'ارسال / ذخیره تصویر</button>' });
+    foot: '<button class="btn tap" data-a="iv-print">' + ico('print', 18) + 'چاپ / PDF</button><button class="btn ghost tap" data-a="iv-img">' + ico('image', 18) + 'ارسال / ذخیره تصویر</button><button class="btn ghost tap" data-a="iv-txt">' + ico('note', 18) + 'فاکتور متنی</button>' });
   p.el._id = id; p.el._mode = canOff && ivs().defMode === 'off' ? 'off' : 'inf'; invShow(p.el);
 }
 A['iv-mode'] = t => { const pg = t.closest('.page'); pg._mode = t.dataset.m; invShow(pg); };
@@ -4621,6 +4621,90 @@ A['ab-go'] = t => {
   save(); render();
   if (counts.length) { openStocktake(); setTimeout(() => { const pg = pages[pages.length - 1]; let n = 0; counts.forEach(c => { const e = pg && pg.querySelector('.stin[data-id="' + (map[c.id] || c.id) + '"]'); if (e) { e.value = fa(c.qty); I.stc && I.stc(e); n++; } }); toast(fa(n) + ' شمارش پر شد. بررسی کن و «ثبت» را بزن.'); }, 250); }
   else toast('کالاها وارد شد.');
+};
+
+/* ===== فاکتور متنی و پیامک ===== */
+const SMS_D = { co: 'پخش مواد غذایی بارینو', thanks: true, bank: '', tpls: [
+  { id: 'welcome', n: 'خوش‌آمدگویی', t: 'سلام {نام} عزیز 🌹\nخوشحالیم که با {شرکت} همکاری می‌کنید. امیدواریم همکاری خوبی داشته باشیم.' },
+  { id: 'thanks', n: 'تشکر بعد از فاکتور', t: '{نام} عزیز، از خرید شما سپاسگزاریم.\nفاکتور شماره {شماره} به مبلغ {مبلغ} ثبت شد.\n{شرکت}' },
+  { id: 'due', n: 'یادآوری تسویه', t: '{نام} عزیز، یادآوری: مانده‌ی حساب شما {مانده} است. لطفاً نسبت به تسویه اقدام فرمایید.\n{شرکت}' },
+  { id: 'promo', n: 'محصول یا تخفیف جدید', t: '{نام} عزیز، محصولات و تخفیف‌های جدید {شرکت} آماده سفارش است. برای هماهنگی تماس بگیرید.' }], log: [] };
+function smsS() { const s = S.sms || (S.sms = {}); for (const k of Object.keys(SMS_D)) if (s[k] === undefined) s[k] = JSON.parse(JSON.stringify(SMS_D[k])); return s; }
+function smsFill(txt, pt, d) {
+  const s = smsS(), bal = pt ? L.partyBal(S, pt.id) : 0;
+  const m = { 'نام': pt ? pt.name : '', 'شرکت': s.co, 'شماره': d && d.no ? fa(d.no) : '', 'مبلغ': d ? mu(d.total || 0) : '', 'مانده': Math.abs(bal) < 1 ? 'تسویه' : mu(Math.abs(bal)) + (bal > 0 ? ' بدهکار' : ' بستانکار'), 'تاریخ': fdate(Date.now()) };
+  return txt.replace(/\{([^}]+)\}/g, (a, k) => m[k] !== undefined ? m[k] : a);
+}
+const smsEn = x => String(x || '').replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/\D/g, '');
+const smsWa = m => { let x = smsEn(m); if (x.startsWith('0')) x = '98' + x.slice(1); return x; };
+function invText(id) {
+  const D = L.invoiceData(S, id); if (!D) return '';
+  const s = smsS(), t = D.pre ? 'پیش‌فاکتور' : D.type === 'buy' ? 'فاکتور خرید' : D.type === 'sret' ? 'برگشت از فروش' : D.type === 'bret' ? 'برگشت از خرید' : 'فاکتور فروش';
+  const ln = ['*' + s.co + '*', t + (D.no ? ' شماره ' + fa(D.no) : '') + ' • ' + fdate(D.ts), 'مشتری: ' + D.party.name, '— — —'];
+  D.items.forEach((i, k) => ln.push(fa(k + 1) + '. ' + i.name + ' — ' + (i.bn ? fa(i.bn) + ' ' + (i.bu || '') : fa(Math.round(i.qty * 100) / 100)) + ' × ' + money(i.price) + ' = ' + money(i.total)));
+  ln.push('— — —');
+  if (D.disc) ln.push('تخفیف: ' + mu(D.disc));
+  if (D.tax) ln.push('مالیات: ' + mu(D.tax));
+  if (D.extra) ln.push('هزینه‌ی اضافه: ' + mu(D.extra));
+  if (D.freight) ln.push('کرایه: ' + mu(D.freight));
+  const tot = (D.items.reduce((a, i) => a + i.total, 0) - D.disc + D.tax + D.extra + D.freight);
+  const dd = ivDoc(id); ln.push('*مبلغ نهایی: ' + mu(dd && dd.total != null ? dd.total : tot) + '*');
+  if (!D.pre && D.payType) ln.push('نحوه‌ی تسویه: ' + (D.payType === 'credit' ? 'نسیه' : D.payType === 'cash' ? 'نقدی' : D.payType === 'pos' ? 'کارتخوان' : 'بانکی'));
+  if (!D.pre && !(ivs().hideBal) && (D.type === 'sale' || D.type === 'buy')) ln.push('مانده‌ی حساب شما: ' + (Math.abs(D.after) < 1 ? 'تسویه' : mu(Math.abs(D.after)) + (D.after > 0 ? ' بدهکار' : ' بستانکار')));
+  if (D.pre) ln.push('این پیش‌فاکتور برای ' + fa(Math.round((s.preH || 72))) + ' ساعت معتبر است.');
+  if (D.note) ln.push('توضیحات: ' + D.note);
+  if (s.bank) ln.push(s.bank);
+  return ln.join('\n');
+}
+function smsSendBtns(mobile, key) {
+  const m = esc(mobile || '');
+  return '<div class="boxes g2" style="margin-top:10px"><button class="btn tap" data-a="sm-cp">کپی متن</button><button class="btn ghost tap" data-a="sm-sh">اشتراک‌گذاری</button>' +
+    (mobile ? '<button class="btn ghost tap" data-a="sm-sms" data-m="' + m + '" data-k="' + esc(key || '') + '">پیامک گوشی</button><button class="btn ghost tap" data-a="sm-wa" data-m="' + m + '">واتساپ</button>' : '') + '</div>' + (mobile ? '' : '<div class="hint">برای این طرف‌حساب شماره‌ی موبایل ثبت نشده.</div>');
+}
+const smsTxt = t => ((t.closest('.sheet') || document).querySelector('#smt') || {}).value || '';
+function smsLog(k, txt) { if (!k) return; const s = smsS(); s.log.push({ ts: Date.now(), partyId: k, txt: txt.slice(0, 200) }); if (s.log.length > 500) s.log.splice(0, s.log.length - 500); save(); }
+A['sm-cp'] = t => { const x = smsTxt(t); try { navigator.clipboard.writeText(x).then(() => toast('کپی شد')); } catch (e) { const e2 = $('#smt'); e2.select(); document.execCommand('copy'); toast('کپی شد'); } };
+A['sm-sh'] = t => { const x = smsTxt(t); if (navigator.share) navigator.share({ text: x }).catch(() => {}); else A['sm-cp'](t); };
+A['sm-sms'] = t => { const x = smsTxt(t); smsLog(t.dataset.k, x); location.href = 'sms:' + smsEn(t.dataset.m) + '?&body=' + encodeURIComponent(x); };
+A['sm-wa'] = t => { const x = smsTxt(t); smsLog(t.dataset.k, x); window.open('https://wa.me/' + smsWa(t.dataset.m) + '?text=' + encodeURIComponent(x), '_blank'); };
+A['iv-txt'] = t => {
+  const pg = t.closest('.page'), d = ivDoc(pg._id); if (!d) return; const pt = party(d.partyId) || {};
+  openSheet('<h3 class="st">فاکتور متنی</h3><textarea id="smt" class="inp" rows="12" style="width:100%;min-height:240px;direction:rtl;font-size:14px">' + esc(invText(pg._id)) + '</textarea><div class="hint">می‌توانی متن را قبل از ارسال ویرایش کنی.</div>' + smsSendBtns(pt.mobile, d.partyId));
+};
+/* تب پیامک طرف‌حساب */
+A['pp-sms'] = t => {
+  const id = t.closest('.page')._id, pt = party(id); if (!pt) return;
+  const p = openPage({ title: 'پیامک • ' + pt.name, body: '', foot: '<button class="btn ghost tap" data-a="sms-set">' + ico('tools', 18) + 'قالب‌ها و تنظیمات</button>' });
+  p.el._id = id;
+  p.el._redraw = () => { const s = smsS(), lg = s.log.filter(x => x.partyId === id).sort((a, b) => b.ts - a.ts);
+    p.body.innerHTML = '<div class="hint" style="margin-top:12px">' + (pt.mobile ? 'شماره: ' + esc(pt.mobile) : 'شماره‌ی موبایل ثبت نشده؛ از «ویرایش پروفایل» اضافه کن.') + '</div>' +
+      '<div class="sec"><h3>یک قالب انتخاب کن</h3><div class="list">' + s.tpls.map(x => rowH({ a: 'sms-pick', id: x.id, title: x.n, sub: smsFill(x.t, pt).slice(0, 50), icon: 'note' })).join('') + rowH({ a: 'sms-pick', id: '_free', title: 'پیام آزاد', sub: 'خودت متن را بنویس', icon: 'edit' }) + '</div></div>' +
+      '<div class="sec"><h3>سابقه‌ی ارسال (' + fa(lg.length) + ')</h3>' + (lg.length ? lg.slice(0, 30).map(x => '<div class="box" style="margin-top:8px"><div class="hint">' + fdate(x.ts) + ' ' + ftime(x.ts) + '</div><div style="white-space:pre-wrap;font-size:13px">' + esc(x.txt) + '</div></div>').join('') : '<div class="hint">هنوز پیامی ارسال نشده.</div>') + '</div>'; };
+  p.el._redraw();
+};
+A['sms-pick'] = t => {
+  const pg = t.closest('.page'), pt = party(pg._id), s = smsS(), x = s.tpls.find(q => q.id === t.dataset.id);
+  openSheet('<h3 class="st">' + (x ? esc(x.n) : 'پیام آزاد') + '</h3><textarea id="smt" class="inp" rows="8" style="width:100%;min-height:160px;direction:rtl">' + esc(x ? smsFill(x.t, pt) : '') + '</textarea>' + smsSendBtns(pt.mobile, pt.id));
+};
+A['sms-set'] = () => {
+  const s = smsS(), p = openPage({ title: 'قالب‌های پیامک و فاکتور متنی', body: '', foot: '<button class="btn tap" data-a="sms-save">ذخیره</button>' });
+  p.body.innerHTML = '<div class="hint" style="margin-top:12px">در متن‌ها می‌توانی از این جاگذارها استفاده کنی: {نام} {شرکت} {شماره} {مبلغ} {مانده} {تاریخ}</div>' +
+    field('نام شرکت (در پیام‌ها و فاکتور متنی)', 'sm-co', s.co) + area('متن حساب بانکی/کارت (ته فاکتور متنی؛ اختیاری)', 'sm-bank', s.bank) +
+    field('اعتبار پیش‌فاکتور (ساعت)', 'sm-pre', fa(s.preH || 72)) +
+    '<button class="chk tap" data-a="sms-th" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="sm-thb">' + (s.thanks ? ico('check', 16) : '') + '</span> بعد از ثبت فروش، پیشنهاد پیام تشکر/خوش‌آمد نشان بده</button>' +
+    s.tpls.map((x, i) => area(esc(x.n), 'sm-t' + i, x.t)).join('');
+};
+A['sms-th'] = () => { const s = smsS(); s.thanks = !s.thanks; $('#sm-thb').innerHTML = s.thanks ? ico('check', 16) : ''; };
+A['sms-save'] = t => { const s = smsS(); s.co = ($('#sm-co').value || '').trim() || SMS_D.co; s.bank = $('#sm-bank').value.trim(); s.preH = +smsEn($('#sm-pre').value) || 72; s.tpls.forEach((x, i) => { const e = $('#sm-t' + i); if (e && e.value.trim()) x.t = e.value; }); save(); closePage ? closePage(t.closest('.page')) : 0; toast('ذخیره شد'); };
+A['go-sms'] = () => A['sms-set']();
+/* پیشنهاد پیام بعد از ثبت فروش */
+const _invSave = A['inv-save'];
+A['inv-save'] = t => {
+  const n = S.docs.length, k = inv.kind, ed = inv.editId, pid = inv.d.partyId; _invSave(t);
+  if (k !== 'sale' || ed || S.docs.length <= n || !smsS().thanks) return;
+  const d = S.docs[S.docs.length - 1], pt = party(pid); if (!d || !pt || !pt.mobile) return;
+  const first = S.docs.filter(x => x.type === 'sale' && x.partyId === pid).length === 1, s = smsS(), tp = s.tpls.find(q => q.id === (first ? 'welcome' : 'thanks'));
+  setTimeout(() => openSheet('<h3 class="st">' + (first ? 'مشتری جدید: ارسال پیام خوش‌آمد؟' : 'ارسال پیام تشکر به مشتری؟') + '</h3><textarea id="smt" class="inp" rows="6" style="width:100%;min-height:130px;direction:rtl">' + esc(smsFill(tp.t + (first ? '\n' + smsFill(s.tpls.find(q => q.id === 'thanks').t, pt, d) : ''), pt, d)) + '</textarea>' + smsSendBtns(pt.mobile, pid) + '<button class="btn ghost tap" data-a="sclose" style="margin-top:8px">فعلاً نه</button>'), 400);
 };
 
 })();
