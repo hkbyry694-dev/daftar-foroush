@@ -1817,7 +1817,7 @@ function done(res, okMsg) {
 /* ---------- ساخت اجزا ---------- */
 function balText(b) { // مثبت: او به ما بدهکار است
   if (Math.abs(b) < 1) return { t: 'تسویه', c: 'mut', amt: '' };
-  return b > 0 ? { t: 'طلبکارم', c: 'neg', amt: mu(b) } : { t: 'بدهکارم', c: 'pos', amt: mu(-b) };
+  return b > 0 ? { t: 'بدهکار', c: 'neg', amt: mu(b) } : { t: 'بستانکار', c: 'pos', amt: mu(-b) };
 }
 function rowH(o) {
   return '<button class="row tap" data-a="' + o.a + '" data-id="' + esc(o.id || '') + '">' +
@@ -1845,8 +1845,8 @@ function tabLedger() {
   const net = parties.reduce((s, p) => s + L.partyBal(S, p.id), 0);
   let status;
   if (ui.sum === 'bal') {
-    const b = balText(net);
-    status = '<div class="lbl">وضعیت</div><div class="val">' + (Math.abs(net) < 1 ? '<span class="mut">همه تسویه‌اند</span>' : '<small>' + cur() + '</small>' + money(Math.abs(net)) + ' <small class="' + b.c + '">' + b.t + ' هستم</small>') + '</div>';
+    const bals = parties.map(p => L.partyBal(S, p.id)), dbt = bals.filter(x => x >= 1).reduce((a, x) => a + x, 0), crd = -bals.filter(x => x <= -1).reduce((a, x) => a + x, 0);
+    status = '<div class="lbl">وضعیت طرف‌حساب‌ها</div><div class="val">' + (!dbt && !crd ? '<span class="mut">همه تسویه‌اند</span>' : (dbt ? '<span class="neg">' + mu(dbt) + '</span> <small class="neg">بدهکار (باید بگیرم)</small>' : '') + (crd ? '<div style="margin-top:4px"><span class="pos">' + mu(crd) + '</span> <small class="pos">بستانکار (باید کالا بدهم یا پول برگردانم)</small></div>' : '')) + '</div>';
   } else {
     const s = L.summary(S, { from: r && r.from, to: r && r.to, ledgerId: lid });
     status = '<div class="lbl">فروش و سود در این بازه</div><div class="val">' + mu(s.rev) + '</div><div class="lbl">سود ناخالص: <b class="' + (s.profit < 0 ? 'neg' : 'pos') + '">' + mu(s.profit) + '</b> • ' + fa(s.count) + ' فاکتور</div><div class="lbl">سود خالص شما (بعد از شرکا، ویزیتور و هزینه‌ها): <b class="' + (s.net < 0 ? 'neg' : 'pos') + '">' + mu(s.net) + '</b></div>';
@@ -2086,7 +2086,7 @@ function openParty(id) {
     const pt = party(id); if (!pt) return p.close();
     const b = balText(L.partyBal(S, id)), ds = applyDocs(S.docs.filter(d => d.partyId === id), 'docs');
     p.el.querySelector('h2').textContent = pt.name;
-    p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">وضعیت</div><div style="font-size:20px;font-weight:700" class="' + b.c + '">' + (b.amt || 'تسویه') + ' <small style="font-size:13px">' + (b.amt ? b.t + ' هستم' : '') + '</small></div></div>' +
+    p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">وضعیت</div><div style="font-size:20px;font-weight:700" class="' + b.c + '">' + (b.amt || 'تسویه') + ' <small style="font-size:13px">' + (b.amt ? b.t : '') + '</small>' + (b.t === 'بستانکار' ? '<div class="hint pos">مبلغ بیشتری از او دریافت شده؛ باید کالا بفروشی یا پولش را برگردانی.</div>' : '') + '</div>' +
       '<div class="boxes g2" style="margin-top:8px"><button class="btn tap" data-a="pp-sale">' + ico('tag', 20) + 'فروش</button><button class="btn tap" data-a="pp-buy">' + ico('cart', 20) + 'خرید</button><button class="btn ghost tap" data-a="pp-rec">پول گرفتم</button><button class="btn ghost tap" data-a="pp-pay">پول دادم</button></div><button class="btn ghost tap" data-a="pp-ret" style="margin-top:8px">' + ico('undo', 20) + 'مرجوعی (فروش یا خرید)</button>' +
       '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button></div>' + partyInfoH(pt) +
       (pt.mobile || pt.address ? '<div class="boxes g2" style="margin-top:8px">' + (pt.mobile ? '<div class="cell"><small>موبایل</small><b>' + esc(pt.mobile) + '</b></div>' : '') + (pt.address ? '<div class="cell"><small>آدرس</small><b>' + esc(pt.address) + '</b></div>' : '') + '</div>' : '') +
