@@ -253,6 +253,38 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 .rt td{padding:7px 10px;border-top:1px solid var(--line);vertical-align:top;white-space:pre;text-align:right}
 .rt td.n{text-align:center}.rt td[class=""]:nth-child(5){min-width:200px}
 .rt tfoot td{font-weight:700;background:var(--soft)}
+
+/* گزارش — طرح جدید (کاغذی روشن) */
+.rdp{background:#fff;color:#222;border-radius:16px;padding:14px 12px;margin-top:10px;border:1px solid #d6e8f4;--rb:#0b6fa4;--rl:#cfe6f5;--rg:#0b8a4a;--rr:#d6213a}
+.rdp .r{color:var(--rr)}.rdp .g{color:var(--rg)}
+.rph{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"t t" "r l";gap:6px 10px;padding-bottom:10px;border-bottom:1.5px solid var(--rl);margin-bottom:12px}
+.rpt{grid-area:t;text-align:center;font-weight:800;font-size:15px;color:var(--rb)}
+.rpr{grid-area:r;display:flex;align-items:center;gap:10px;min-width:0}.rpr b{font-size:16px;color:var(--rb);display:block}.rpr small,.rpl small{display:block;color:#444;font-size:11.5px;line-height:1.7}
+.rpl{grid-area:l;text-align:left;direction:rtl;display:flex;flex-direction:column;align-items:flex-end;justify-content:center}
+.rdp .phl{width:48px;height:48px;border-radius:10px;border:0;flex:none;background:#fff center/contain no-repeat}
+.rsm{border:1.5px solid var(--rl);background:#f3f9fd;border-radius:16px;padding:10px;margin-bottom:12px}
+.rsm-in{background:#fff;border:1px solid #e1eef7;border-radius:12px;display:flex;flex-wrap:wrap}
+.rsc{flex:1 1 30%;min-width:96px;padding:10px 12px;text-align:center;border-left:1px dashed #cfdde8;border-bottom:1px dashed #e1eef7}
+.rsc:last-child{border-left:0}.rsc small{display:block;color:#6b7c88;font-size:11px}.rsc b{display:block;font-size:15px;margin-top:3px}.rsc.st{flex-basis:100%;border-left:0}.rsc.st b{font-size:17px}.rsc i{font-style:normal;font-size:11px;font-weight:600}.rsc em{display:block;font-style:normal;color:#6b7c88;font-size:10.5px;margin-top:2px}
+.rsn{margin:8px 4px 0;padding-top:8px;border-top:1px dashed #c7dbe9;font-size:11px;color:#6b7c88;line-height:1.8}
+.rdp .rh4{margin:14px 2px 6px;color:var(--rb);font-size:13px}
+.rtw2{border:1.5px solid var(--rl);border-radius:14px;overflow:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
+.rt2{border-collapse:collapse;width:100%;font-size:12px;color:#222}
+.rt2 th{background:#e9f4fb;color:#4c5c68;font-weight:500;padding:10px 8px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--rl)}
+.rt2 td{padding:8px;border-top:1px solid #edf3f8;text-align:right;vertical-align:middle;line-height:1.6;white-space:pre-wrap}
+.rt2 td.n{text-align:center;white-space:nowrap}.rt2 td:not(.n){min-width:120px}
+.rt2 tbody tr:nth-child(even) td{background:#f7fbfe}
+.rt2 td b{font-weight:700}.rt2 td small{color:#566;font-size:10.5px}.rt2 .m{font-weight:700}
+.rt2 tfoot td{font-weight:800;background:#e9f4fb!important;border-top:1.5px solid var(--rl);text-align:center}
+.rpf{display:none}
+@media print{
+  .rdp{border:0;border-radius:0;padding:0;margin:0}
+  .rpg{height:268mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}.rpg:last-child{page-break-after:auto}
+  .rt2 td:not(.n){min-width:0}.rt2 td.n{white-space:normal}.rpg .rtw2{overflow:visible}.rt2{font-size:10px}.rt2 td{padding:6px 6px}.rt2 th{padding:8px 6px}
+  .rpf{display:flex;justify-content:space-between;align-items:center;margin-top:auto;background:#eef2f6;border-radius:10px;padding:8px 14px;font-size:10px;color:#5a6670}
+  .rpm{display:flex;align-items:center;gap:6px}.rpi{width:16px;height:16px;border-radius:4px;background:center/contain no-repeat}
+  .rsc{break-inside:avoid}
+}
 /* چاپ */
 #printroot{display:none}
 .phd{display:flex;align-items:center;gap:12px;border-bottom:3px solid #04234b;padding-bottom:8px;margin-bottom:10px}.phd b{font-size:18px;color:#04234b;display:block}.phd small{color:#555}.phl{width:54px;height:54px;border-radius:12px;border:1px solid #ddd;background:#fff center/contain no-repeat}.phdate{margin-right:auto}
@@ -4334,19 +4366,62 @@ function cellH(v, c, tone) {
   if (c.t === 'num') return qf(v);
   return esc(v).replace(/\n/g, '<br>');
 }
+const rvTone = t => t === 'pos' ? 'g' : t === 'neg' ? 'r' : (t || '');
+function rvHead(m) {
+  const P = prof(), ln = [P.owner, P.phone].filter(Boolean).join(' - ');
+  return '<div class="rph"><div class="rpt">' + esc(m.title) + '</div><div class="rpr"><span class="phl" style="background-image:url(\'' + (P.logo || BRAND.icon) + '\')"></span><div><b>' + esc(bizName()) + '</b>' + (ln ? '<small>' + esc(ln) + '</small>' : '') + (P.address ? '<small>آدرس : ' + esc(P.address) + '</small>' : '') + '</div></div>' +
+    '<div class="rpl"><small>تاریخ صدور : ' + fdate(Date.now()) + '</small>' + (m.subtitle ? '<small>' + esc(m.subtitle) + '</small>' : '') + (m.party ? '<small>طرف‌حساب : ' + esc([m.party.name, m.party.mobile].filter(Boolean).join(' - ')) + '</small>' + (m.party.address ? '<small>' + esc(m.party.address) + '</small>' : '') : '') + '</div></div>';
+}
+function rvSum(m) {
+  return '<div class="rsm"><div class="rsm-in">' + m.summary.map(s => '<div class="rsc' + (s.strong ? ' st' : '') + '"><small>' + esc(s.l) + '</small><b class="' + (s.kind === 'bal' ? (s.v > 0.5 ? 'r' : s.v < -0.5 ? 'g' : '') : rvTone(s.tone)) + '">' + (s.kind === 'bal' ? (Math.abs(s.v) < 1 ? 'تسویه' : money(Math.abs(s.v)) + ' <i>' + balStatus(s.v) + '</i>') : money(s.v)) + '</b>' + (s.sub ? '<em>' + esc(s.sub) + '</em>' : '') + '</div>').join('') + '</div>' + (m.note ? '<div class="rsn">نکته: ' + esc(m.note) + '</div>' : '') + '</div>';
+}
+function rvCell(v, c, tone) {
+  if (v === '' || v == null) return '';
+  if (c.t === 'money') return '<span class="m ' + rvTone(tone) + '">' + money(v) + '</span>';
+  if (c.t === 'num') return '<span class="m">' + qf(v) + '</span>';
+  const t = String(v); if (t.indexOf('\n') < 0) return esc(t);
+  const parts = t.split('\n'); return '<b>' + esc(parts[0]) + '</b><br><small>' + parts.slice(1).map(esc).join('<br>') + '</small>';
+}
+const rvTh = sh => '<thead><tr>' + sh.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead>';
+const rvTr = (sh, r, i) => '<tr>' + r.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + rvCell(v, sh.cols[k], sh.tones && sh.tones[i]) + '</td>').join('') + '</tr>';
+const rvFoot = sh => sh.foot ? '<tfoot><tr>' + sh.foot.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + (typeof v === 'number' ? money(v) : esc(v)) + '</td>').join('') + '</tr></tfoot>' : '';
+const rvEmpty = sh => '<tr><td colspan="' + sh.cols.length + '" class="mut" style="text-align:center;padding:16px">موردی در این بازه نیست.</td></tr>';
 function modelHtml(m) {
-  let h = '<div class="rdoc"><div class="rhead"><b>' + esc(m.title) + '</b><small>' + esc(m.subtitle || '') + '</small>' + (m.party ? '<small>' + esc([m.party.name, m.party.mobile, m.party.address].filter(Boolean).join(' • ')) + '</small>' : '') + '</div>';
-  h += '<div class="rsum">' + m.summary.map(s => '<div class="rs' + (s.strong ? ' st' : '') + '"><small>' + esc(s.l) + '</small><b class="' + (s.kind === 'bal' ? (s.v > 0.5 ? 'pos' : s.v < -0.5 ? 'neg' : '') : (s.tone || '')) + '">' + (s.kind === 'bal' ? (Math.abs(s.v) < 1 ? 'تسویه' : money(Math.abs(s.v)) + ' <i>' + balStatus(s.v) + '</i>') : money(s.v)) + '</b>' + (s.sub ? '<em>' + esc(s.sub) + '</em>' : '') + '</div>').join('') + '</div>';
-  if (m.note) h += '<div class="hint">' + esc(m.note) + '</div>';
-  m.sheets.forEach((sh, si) => {
+  let h = '<div class="rdoc rdp">' + rvHead(m) + rvSum(m);
+  m.sheets.forEach(sh => {
     if (m.sheets.length > 1) h += '<h4 class="rh4">' + esc(sh.name) + '</h4>';
-    h += '<div class="rtw"><table class="rt"><thead><tr>' + sh.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
-      (sh.rows.map((r, i) => '<tr>' + r.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + cellH(v, sh.cols[k], sh.tones && sh.tones[i]) + '</td>').join('') + '</tr>').join('') || '<tr><td colspan="' + sh.cols.length + '" class="mut" style="text-align:center;padding:16px">موردی در این بازه نیست.</td></tr>') + '</tbody>' +
-      (sh.foot ? '<tfoot><tr>' + sh.foot.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + (typeof v === 'number' ? money(v) : esc(v)) + '</td>').join('') + '</tr></tfoot>' : '') + '</table></div>';
+    h += '<div class="rtw2"><table class="rt2">' + rvTh(sh) + '<tbody>' + (sh.rows.map((r, i) => rvTr(sh, r, i)).join('') || rvEmpty(sh)) + '</tbody>' + rvFoot(sh) + '</table></div>';
   });
   return h + '</div>';
 }
-function printHead() { const P = prof(); return '<div class="phd"><span class="phl" style="background-image:url(\'' + (P.logo || BRAND.icon) + '\')"></span><div><b>' + esc(bizName()) + '</b><small>' + esc([P.phone, P.address].filter(Boolean).join(' • ')) + '</small></div><small class="phdate">تاریخ صدور: ' + fdate(Date.now()) + '</small></div>'; }
+/* چاپ: صفحه‌بندی A4 با هدر و فوتر تکرارشونده */
+function rvRowMm(sh, r) {
+  let ln = 1;
+  r.forEach((v, k) => { const c = sh.cols[k]; if (v == null || v === '' || c.t !== 'text') return; String(v).split('\n').length; const w = Math.max(6, (c.w || 12) * 1.15); const n = String(v).split('\n').reduce((a, x) => a + Math.max(1, Math.ceil(x.length / w)), 0); if (n > ln) ln = n; });
+  return 5.5 + 4.6 * ln;
+}
+function rvPrintPages(m) {
+  const BODY = 212, pages = []; let cur = null, left = 0, first = true;
+  const open = () => { cur = { html: '' }; pages.push(cur); left = BODY - (first ? 36 + 34 + (m.note ? 9 : 0) : 22); first = false; };
+  open();
+  m.sheets.forEach((sh, si) => {
+    let rows = sh.rows.map((r, i) => ({ r, i, h: rvRowMm(sh, r) })); if (!rows.length) rows = [{ empty: 1, h: 12 }];
+    const foot = sh.foot ? 9 : 0, title = m.sheets.length > 1 ? 9 : 0;
+    let k = 0, firstChunk = true;
+    while (k < rows.length) {
+      const need = 9 + (firstChunk ? title : 0) + rows[k].h; if (left < need && cur.html) open();
+      let used = 9 + (firstChunk ? title : 0), chunk = [];
+      while (k < rows.length && used + rows[k].h + (k === rows.length - 1 ? foot : 0) <= left) { used += rows[k].h; chunk.push(rows[k]); k++; }
+      if (!chunk.length) { chunk.push(rows[k]); used += rows[k].h; k++; }
+      const last = k >= rows.length;
+      cur.html += (firstChunk && title ? '<h4 class="rh4">' + esc(sh.name) + '</h4>' : '') + '<div class="rtw2"><table class="rt2">' + rvTh(sh) + '<tbody>' + chunk.map(x => x.empty ? rvEmpty(sh) : rvTr(sh, x.r, x.i)).join('') + '</tbody>' + (last ? rvFoot(sh) : '') + '</table></div>';
+      left -= used + (last ? foot : 0) + 3; firstChunk = false;
+      if (!last) open();
+    }
+  });
+  const n = pages.length;
+  return pages.map((pg, i) => '<div class="rpg rdp">' + rvHead(m).replace(/<div class="rpt">[^<]*<\/div>/, i ? '<div class="rpt">' + esc(m.title) + '</div>' : '<div class="rpt">' + esc(m.title) + '</div>') + (i ? '' : rvSum(m)) + pg.html + '<div class="rpf"><span>صفحه ' + fa(i + 1) + ' از ' + fa(n) + '</span><span class="rpm"><span class="rpi" style="background-image:url(\'' + BRAND.icon + '\')"></span>طراحی و صدور این گزارش توسط نرم‌افزار <b>دفتر فروش</b> انجام شده است.</span></div></div>').join('');
+}
 chipH.rvf = v => { if (v === 'custom') { rng = ui.custom ? { ...ui.custom } : { from: L.dayStart(Date.now()), to: L.dayStart(Date.now()) + 86399999 }; rng.w = openSheet('<div id="rbox"></div>', () => drawRange()); rng.cb = () => { rv.f = 'custom'; rvDraw(); }; return; } rv.f = v; rvDraw(); };
 function rvDraw() {
   rv.m = rvBuild();
@@ -4361,7 +4436,7 @@ A['rv-xls'] = () => {
   try { const m = rv.m; const bytes = XL.build(m); const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); shareFile(blob, fileName(m.title + '-' + fdate(Date.now()).replace(/\//g, '-'), 'xlsx'), m.title); }
   catch (e) { toast('ساخت فایل اکسل ممکن نشد.', 1); }
 };
-A['rv-print'] = () => printHtml(printHead() + modelHtml(rv.m), 'rep');
+A['rv-print'] = () => printHtml(rvPrintPages(rv.m), 'rep');
 A['rep-ledger'] = () => ui.sub === 'parties' ? openReport('parties', { ledgerId: S.activeLedger }) : openReport('txns', { ledgerId: S.activeLedger, title: 'گزارش تراکنش‌ها', sub: ledger().name });
 A['rep-inv'] = () => openReport('inv', {});
 A['rep-accts'] = () => openReport('accts', {});
