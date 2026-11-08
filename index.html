@@ -308,6 +308,9 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 @keyframes sheetup{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
+.av.img{background-color:#fff;background-size:contain;background-position:center;background-repeat:no-repeat;border:1px solid var(--line,#e3e6ef)}
+.av.img[style*="url('')"]{background-image:none!important}
+
 </style>
 <div id="app"><main id="main"></main><nav class="bar" id="nav" aria-label="بخش‌های اصلی"></nav></div><div id="pages"></div><div id="sheets"></div>
 <script>
@@ -1041,7 +1044,7 @@ function addCashDoc(S, type, d) { // receipt | payment (با طرف‌حساب)
     const amount = positive(d.amount); needAccount(s, d);
     if (!s.parties.find(p => p.id === d.partyId)) throw new Error('طرف‌حساب را انتخاب کنید.');
     const id = uid(), seq = nextSeq(s), sign = type === 'receipt' ? 1 : -1;
-    s.docs.push({ id, seq, type, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, total: amount, accountId: d.accountId, note: d.note || '', att: d.att || [] });
+    s.docs.push({ id, seq, type, ts: d.ts, ledgerId: d.ledgerId, partyId: d.partyId, total: amount, accountId: d.accountId, payType: d.payType || '', note: d.note || '', att: d.att || [] });
     s.txns.push({ id: uid(), ref: id, ts: d.ts, accountId: d.accountId, amount: sign * amount });
     s.pent.push({ id: uid(), ref: id, ts: d.ts, partyId: d.partyId, delta: -sign * amount });
     return id;
@@ -1817,6 +1820,7 @@ const partner = id => S.partners.find(p => p.id === id);
 const visitor = id => S.visitors.find(p => p.id === id);
 const unitOf = id => (prod(id) || {}).unit || '';
 const PT = { cash: 'نقدی', pos: 'کارتخوان', bank: 'به حساب بانکی', credit: 'نسیه' };
+const acLogo = a => a.logo || ((S.bankLogos || {})[a.bank || ''] || '');
 const acctKind = a => a.kind || (/نقد/.test(a.name) ? 'cash' : 'bank');
 const defAcct = pt => { const k = pt === 'cash' ? 'cash' : 'bank'; const a = S.accounts.find(x => acctKind(x) === k) || S.accounts[0]; return a ? a.id : ''; };
 const qlab = i => i.bn ? qf(i.bn) + ' ' + i.bu : qf(i.qty) + ' ' + unitOf(i.pid);
@@ -1836,7 +1840,7 @@ function balText(b) { // مثبت: او به ما بدهکار است
 }
 function rowH(o) {
   return '<button class="row tap" data-a="' + o.a + '" data-id="' + esc(o.id || '') + '">' +
-    '<span class="av ' + (o.av || '') + '">' + ico(o.icon || 'user', 22) + '</span>' +
+    (o.img ? '<span class="av img" style="background-image:url(\'' + o.img + '\')"></span>' : '<span class="av ' + (o.av || '') + '">' + ico(o.icon || 'user', 22) + '</span>') +
     '<span class="tx"><b>' + esc(o.title) + '</b>' + (o.sub ? '<small>' + esc(o.sub) + '</small>' : '') + '</span>' +
     (o.end ? '<span class="end">' + o.end + '</span>' : '') + '</button>';
 }
@@ -1949,7 +1953,7 @@ function invList() {
 function tabAccounts() {
   const tot = S.accounts.reduce((s, a) => s + L.accountBal(S, a.id), 0);
   const head = '<div class="top"><h1>حساب‌ها</h1><div class="status"><div class="lbl">مجموع نقدینگی</div><div class="val ' + (tot < 0 ? 'neg' : '') + '">' + mu(tot) + '</div></div><div class="chips"><button class="chip tap" data-a="tf-new">انتقال بین حساب‌ها</button><button class="chip tap" data-a="tools" data-k="acc">' + ico('sliders', 15) + ' ابزارها</button></div></div>';
-  return head + '<div class="wrap"><div class="srow" style="justify-content:flex-end">' + sbtn('accts') + '</div><div class="list">' + applyAccounts(S.accounts).map(a => { const b = L.accountBal(S, a.id); return rowH({ a: 'acct', id: a.id, title: a.name, icon: 'bank', end: endH(mu(b), b < 0 ? 'منفی' : '', b < 0 ? 'neg' : '') }); }).join('') + '</div>' +
+  return head + '<div class="wrap"><div class="srow" style="justify-content:flex-end">' + sbtn('accts') + '</div><div class="list">' + applyAccounts(S.accounts).map(a => { const b = L.accountBal(S, a.id); return rowH({ a: 'acct', id: a.id, title: a.name, sub: a.bank || '', img: acLogo(a), icon: 'bank', end: endH(mu(b), b < 0 ? 'منفی' : '', b < 0 ? 'neg' : '') }); }).join('') + '</div>' +
     (S.accounts.some(a => L.accountBal(S, a.id) < 0) ? '<div class="warn-note">یکی از حساب‌ها منفیه. معمولاً یعنی پرداخت یا برداشتی ثبت شده ولی واریزش ثبت نشده.</div>' : '') + '</div>' +
     '<div class="fabs"><button class="fab-x tap" data-a="newacct">حساب جدید</button><button class="fab tap" data-a="fab" aria-label="ثبت جدید">' + ico('plus', 28) + '</button></div>';
 }
@@ -2163,16 +2167,39 @@ A['pr-edit'] = t => prodSheet(t.closest('.page')._id); A['pr-buy'] = () => openI
 
 /* ---------- حساب‌ها ---------- */
 let ak = null; chipH.akind = x => { ak.kind = x; };
+const BANKS = ['ملی ایران', 'ملت', 'صادرات ایران', 'تجارت', 'سپه', 'رفاه کارگران', 'کشاورزی', 'مسکن', 'صنعت و معدن', 'توسعه صادرات ایران', 'توسعه تعاون', 'پست بانک ایران', 'اقتصاد نوین', 'پارسیان', 'کارآفرین', 'سامان', 'سینا', 'سرمایه', 'شهر', 'دی', 'پاسارگاد', 'آینده', 'گردشگری', 'ایران زمین', 'قوامین', 'انصار', 'حکمت ایرانیان', 'مهر ایران', 'رسالت', 'کوثر', 'نور', 'ملل', 'خاورمیانه', 'ایران ونزوئلا', 'بانک مرکزی', 'سایر / نام دلخواه'];
+A['bk-pick'] = () => {
+  const draw = q => $('#bkl').innerHTML = BANKS.filter(b => !q || b.includes(q)).map((b, i) => '<button class="row tap" data-a="bk-sel" data-id="' + esc(b) + '"><span class="av img" style="background-image:url(\'' + ((S.bankLogos || {})[b] || '') + '\')">' + ((S.bankLogos || {})[b] ? '' : ico('bank', 20)) + '</span><span class="tx"><b>' + (b.startsWith('سایر') ? b : 'بانک ' + b) + '</b></span></button>').join('');
+  openSheet('<h3 class="st">انتخاب بانک</h3><div class="search" style="margin-bottom:8px">' + ico('search', 20) + '<input id="bkq" placeholder="جستجوی بانک…" autocomplete="off"></div><div class="list" id="bkl" style="max-height:52vh;overflow:auto"></div>');
+  draw(''); $('#bkq').addEventListener('input', e => draw(e.target.value.trim()));
+};
+A['bk-sel'] = t => {
+  let b = t.dataset.id; closeSheet();
+  if (b.startsWith('سایر')) { b = ($('#an') && $('#an').value.trim()) || ''; ak.bank = b; $('#abk').textContent = b || 'انتخاب از لیست بانک‌ها'; toast('نام بانک را در «نام حساب» بنویس.'); return; }
+  ak.bank = b; $('#abk').textContent = b; const nm = $('#an'); if (nm && !nm.value.trim()) nm.value = 'بانک ' + b;
+  const lg = (S.bankLogos || {})[b]; if (lg && !ak.logo) { ak.logo = ''; } const el = $('#abl'); if (el) el.style.backgroundImage = acLogo(ak) ? 'url(\'' + acLogo(ak) + '\')' : 'none';
+};
+A['bk-logo'] = () => { const f = $('#aclf'); f.value = ''; f.click(); };
+A['bk-logo0'] = () => { ak.logo = ''; const el = $('#abl'); if (el) el.style.backgroundImage = acLogo(ak) ? 'url(\'' + acLogo(ak) + '\')' : 'none'; };
+document.addEventListener('change', e => {
+  const f = e.target; if (!f || f.id !== 'aclf' || !f.files || !f.files[0]) return;
+  const rd = new FileReader();
+  rd.onload = () => { const img = new Image(); img.onload = () => { const m = 160, sc = Math.min(1, m / Math.max(img.width, img.height)), w = Math.round(img.width * sc), h = Math.round(img.height * sc), c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h); ak.logo = c.toDataURL('image/png'); if (ak.bank) { (S.bankLogos || (S.bankLogos = {}))[ak.bank] = ak.logo; } const el = $('#abl'); if (el) el.style.backgroundImage = 'url(\'' + ak.logo + '\')'; toast('لوگو ذخیره شد'); }; img.onerror = () => toast('این تصویر خوانده نشد.', 1); img.src = rd.result; };
+  rd.readAsDataURL(f.files[0]);
+});
 function acctSheet(id) {
-  const a = id ? acct(id) : { name: '', opening: 0, kind: 'bank' }; ak = { kind: acctKind(a) };
-  const w = openSheet('<h3 class="st">' + (id ? 'ویرایش حساب' : 'حساب جدید') + '</h3>' + field('نام حساب *', 'an', a.name) + '<div class="f"><label>نوع حساب</label><div style="padding-top:8px">' + chipsH('akind', [['cash', 'نقدی (صندوق)'], ['bank', 'بانکی']], ak.kind) + '</div></div>' + field('موجودی اولیه', 'ao', a.opening ? fa(grp(a.opening)) : '', { money: 1 }) +
+  const a = id ? acct(id) : { name: '', opening: 0, kind: 'bank' }; ak = { kind: acctKind(a), bank: a.bank || '', logo: a.logo || '' };
+  const w = openSheet('<h3 class="st">' + (id ? 'ویرایش حساب' : 'حساب جدید') + '</h3>' +
+    '<div class="f"><label>بانک</label><button class="pick tap" data-a="bk-pick"><span id="abk">' + (ak.bank ? esc(ak.bank) : 'انتخاب از لیست بانک‌ها') + '</span>' + ico('down', 18) + '</button></div>' +
+    '<div class="mrow" style="margin:6px 0 10px"><div id="abl" class="av img" style="width:56px;height:56px;border-radius:14px;background-image:' + (acLogo(ak) ? 'url(' + "'" + acLogo(ak) + "'" + ')' : 'none') + '"></div><div style="flex:1;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost tap" data-a="bk-logo">' + ico('image', 18) + 'آپلود لوگوی بانک</button><button class="btn ghost tap" data-a="bk-logo0">حذف لوگو</button></div><input type="file" id="aclf" accept="image/*" hidden></div>' +
+    field('نام حساب *', 'an', a.name) + '<div class="f"><label>نوع حساب</label><div style="padding-top:8px">' + chipsH('akind', [['cash', 'نقدی (صندوق)'], ['bank', 'بانکی']], ak.kind) + '</div></div>' + field('موجودی اولیه', 'ao', a.opening ? fa(grp(a.opening)) : '', { money: 1 }) +
     '<div class="hint">برای حساب منفی اولیه، موجودی را ۰ بگذار و بعداً واریز ثبت کن.</div><div class="pr"><button class="btn tap" data-a="a-save">ثبت</button></div>' +
     (id && !S.txns.some(t => t.accountId === id) && S.accounts.length > 1 ? '<div class="pr"><button class="btn danger tap" data-a="a-del">حذف حساب</button></div>' : ''));
   w._id = id;
 }
 A['a-save'] = t => {
   const w = t.closest('.sw'), name = $('#an', w).value.trim(); if (!name) return toast('نام حساب را وارد کن.', 1);
-  const v = { name, opening: num($('#ao', w).value), kind: ak.kind };
+  const v = { name, opening: num($('#ao', w).value), kind: ak.kind, bank: ak.kind === 'cash' ? '' : ak.bank, logo: ak.logo || '' };
   if (w._id) Object.assign(acct(w._id), v); else S.accounts.push({ id: L.uid(), ...v });
   save(); closeSheet(w); render();
 };
@@ -2236,15 +2263,16 @@ A['ls-del'] = t => { const w = t.closest('.sw'), id = w._id; closeSheet(w); snap
 /* ---------- دریافت/پرداخت و درآمد/هزینه ---------- */
 function cashForm(type, partyId) {
   ATT.cash = [];
-  cf = { ts: Date.now(), partyId: partyId || '', type };
+  cf = { ts: Date.now(), partyId: partyId || '', type, payType: 'cash' };
   const w = openSheet('<h3 class="st">' + (type === 'receipt' ? 'پول گرفتم' : 'پول دادم') + '</h3><div class="f"><label>طرف‌حساب *</label><button class="pick tap" data-a="cs-party"><span id="cps">' + (partyId ? esc(party(partyId).name) : 'انتخاب کنید') + '</span>' + ico('down', 18) + '</button></div>' +
-    field('مبلغ (' + cur() + ') *', 'cam', '', { money: 1 }) + select('حساب', 'cac', accOpts(), (S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'cnt', '') + attSec('cash') + '<div class="pr"><button class="btn tap" data-a="cs-save">ثبت</button></div>');
+    field('مبلغ (' + cur() + ') *', 'cam', '', { money: 1 }) + '<div class="f"><label>نحوه‌ی ' + (type === 'receipt' ? 'دریافت' : 'پرداخت') + '</label><div style="padding-top:8px">' + chipsH('cpay', [['cash', 'نقدی'], ['pos', 'کارتخوان'], ['bank', 'کارت‌به‌کارت / حواله']], 'cash') + '</div></div>' + select('حساب', 'cac', accOpts(), (S.accounts.find(a => acctKind(a) === 'cash') || S.accounts[0] || {}).id) + dtCells(cf.ts) + field('توضیحات', 'cnt', '') + attSec('cash') + '<div class="pr"><button class="btn tap" data-a="cs-save">ثبت</button></div>');
   w._f = cf;
 }
+chipH.cpay = v => { cf.payType = v; const a = S.accounts.find(x => v === 'cash' ? acctKind(x) === 'cash' : acctKind(x) !== 'cash'); const e = $('#cac'); if (a && e) e.value = a.id; };
 A['cs-party'] = () => pickParty(p => { cf.partyId = p.id; $('#cps').textContent = p.name; });
 A['cs-save'] = t => {
   const w = t.closest('.sw');
-  const r = L.addCashDoc(S, cf.type, { ledgerId: S.activeLedger, partyId: cf.partyId, amount: num($('#cam', w).value), accountId: $('#cac', w).value, ts: cf.ts, note: $('#cnt', w).value.trim(), att: (ATT.cash || []).slice() });
+  const r = L.addCashDoc(S, cf.type, { ledgerId: S.activeLedger, partyId: cf.partyId, amount: num($('#cam', w).value), accountId: $('#cac', w).value, payType: cf.payType, ts: cf.ts, note: $('#cnt', w).value.trim(), att: (ATT.cash || []).slice() });
   if (done(r, 'ثبت شد')) { closeSheet(w); render(); }
 };
 function moneyForm(kind, catId) {
@@ -2541,7 +2569,7 @@ function openDoc(id) {
     p.el.querySelector('h2').textContent = (d.type === 'smove' ? (L.SM_FA[d.kind] || t[0]) : t[0]) + (inv_ || d.type === 'sret' || d.type === 'bret' || d.type === 'pack' || d.type === 'unpack' ? ' ' + fa(d.no) : '');
     if (d.type === 'sret' || d.type === 'bret') { p.body.innerHTML = retDocHtml(d); return; }
     let h = '<div class="box" style="margin-top:12px"><div class="mrow"><b>' + esc(d.type === 'xfer' ? L.nameOfDocParty(S, d) : d.partyId ? (party(d.partyId) || {}).name : d.catId ? (S.cats.find(c => c.id === d.catId) || {}).name : d.partnerId ? (partner(d.partnerId) || {}).name : (visitor(d.visitorId) || {}).name) + '</b><span class="pill">' + fa(fdate(d.ts)) + ' • ' + ftime(d.ts) + '</span></div>' +
-      (d.accountId ? '<div class="hint">حساب: ' + esc((acct(d.accountId) || {}).name) + '</div>' : '') + (d.note ? '<div class="hint">' + esc(d.note) + '</div>' : '') + '</div>';
+      (d.payType ? '<div class="hint">نحوه‌ی ' + (d.type === 'receipt' ? 'دریافت' : 'پرداخت') + ': ' + L.PAY_FA[d.payType] + '</div>' : '') + (d.accountId ? '<div class="hint">حساب: ' + esc((acct(d.accountId) || {}).name) + '</div>' : '') + (d.note ? '<div class="hint">' + esc(d.note) + '</div>' : '') + '</div>';
     if (inv_) {
       h += '<div class="sec"><h3>اقلام</h3><div class="list">' + d.items.map(i => '<div class="it" style="border-radius:var(--r)"><div class="a"><span>' + (i.gift ? '🎁 ' : '') + esc((prod(i.pid) || {}).name) + '</span><span>' + (i.gift ? 'جایزه' : mu(i.total)) + '</span></div><div class="b2"><span>' + (i.bn && !i.gift ? qf(i.bn) + ' ' + i.bu + ' × ' + money(i.bp) + ' (' + qf(i.qty) + ' ' + unitOf(i.pid) + ')' : qf(i.qty) + ' ' + unitOf(i.pid)) + (i.gift ? (sale ? (i.gsrc === 'bonus' ? ' • از جایزه‌های دریافتی' : ' • از موجودی انبار') : ' • ارزش مرجع ' + money(i.ref || 0)) : (i.bn ? '' : ' × ' + money(i.price)) + (i.bonus ? ' + ' + qf(i.bonus) + ' جایزه' : '')) + (i.ret ? ' • مرجوع ' + qf(i.ret) : '') + '</span>' + (sale ? '<span>سود ' + money(i.profit) + '</span>' : (i.fpu > 0 || i.bonus || i.gift ? '<span>تمام‌شده ' + money(Math.round(i.unitCost)) + '</span>' : '')) + '</div>' + (!sale && i.partners && i.partners.length ? '<div class="b2"><span>' + i.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') + '</span></div>' : '') + '</div>').join('') + '</div></div>' +
         '<div class="box sec"><div class="lines"><div class="line"><span>جمع محصولات</span><b>' + mu(d.gross != null ? d.gross : d.sub) + '</b></div>' + (d.disc ? '<div class="line"><span>تخفیف' + (d.discMode === 'percent' ? ' (' + fa(d.discVal) + '٪)' : '') + '</span><b class="neg">−' + mu(d.disc) + '</b></div>' : '') + (d.tax ? '<div class="line"><span>مالیات</span><b>' + mu(d.tax) + '</b></div>' : '') + (d.extra ? '<div class="line"><span>هزینه‌های جانبی</span><b>' + mu(d.extra) + '</b></div>' : '') + (d.freight ? '<div class="line"><span>کرایه بار' + (d.freightMode === 'acct' ? ' <small>(پرداخت جدا)</small>' : '') + '</span><b>' + mu(d.freight) + '</b></div>' : '') + '<div class="line big"><span>جمع فاکتور</span><span>' + mu(d.total) + '</span></div></div></div>' +
