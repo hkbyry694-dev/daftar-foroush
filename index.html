@@ -254,37 +254,6 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 .rt td.n{text-align:center}.rt td[class=""]:nth-child(5){min-width:200px}
 .rt tfoot td{font-weight:700;background:var(--soft)}
 
-/* گزارش — طرح جدید (کاغذی روشن) */
-.rdp{background:#fff;color:#222;border-radius:16px;padding:14px 12px;margin-top:10px;border:1px solid #d6e8f4;--rb:#0b6fa4;--rl:#cfe6f5;--rg:#0b8a4a;--rr:#d6213a}
-.rdp .r{color:var(--rr)}.rdp .g{color:var(--rg)}
-.rph{display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"t t" "r l";gap:6px 10px;padding-bottom:10px;border-bottom:1.5px solid var(--rl);margin-bottom:12px}
-.rpt{grid-area:t;text-align:center;font-weight:800;font-size:15px;color:var(--rb)}
-.rpr{grid-area:r;display:flex;align-items:center;gap:10px;min-width:0}.rpr b{font-size:16px;color:var(--rb);display:block}.rpr small,.rpl small{display:block;color:#444;font-size:11.5px;line-height:1.7}
-.rpl{grid-area:l;text-align:left;direction:rtl;display:flex;flex-direction:column;align-items:flex-end;justify-content:center}
-.rdp .phl{width:48px;height:48px;border-radius:10px;border:0;flex:none;background:#fff center/contain no-repeat}
-.rsm{border:1.5px solid var(--rl);background:#f3f9fd;border-radius:16px;padding:10px;margin-bottom:12px}
-.rsm-in{background:#fff;border:1px solid #e1eef7;border-radius:12px;display:flex;flex-wrap:wrap}
-.rsc{flex:1 1 30%;min-width:96px;padding:10px 12px;text-align:center;border-left:1px dashed #cfdde8;border-bottom:1px dashed #e1eef7}
-.rsc:last-child{border-left:0}.rsc small{display:block;color:#6b7c88;font-size:11px}.rsc b{display:block;font-size:15px;margin-top:3px}.rsc.st{flex-basis:100%;border-left:0}.rsc.st b{font-size:17px}.rsc i{font-style:normal;font-size:11px;font-weight:600}.rsc em{display:block;font-style:normal;color:#6b7c88;font-size:10.5px;margin-top:2px}
-.rsn{margin:8px 4px 0;padding-top:8px;border-top:1px dashed #c7dbe9;font-size:11px;color:#6b7c88;line-height:1.8}
-.rdp .rh4{margin:14px 2px 6px;color:var(--rb);font-size:13px}
-.rtw2{border:1.5px solid var(--rl);border-radius:14px;overflow:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
-.rt2{border-collapse:collapse;width:100%;font-size:12px;color:#222}
-.rt2 th{background:#e9f4fb;color:#4c5c68;font-weight:500;padding:10px 8px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--rl)}
-.rt2 td{padding:8px;border-top:1px solid #edf3f8;text-align:right;vertical-align:middle;line-height:1.6;white-space:pre-wrap}
-.rt2 td.n{text-align:center;white-space:nowrap}.rt2 td:not(.n){min-width:120px}
-.rt2 tbody tr:nth-child(even) td{background:#f7fbfe}
-.rt2 td b{font-weight:700}.rt2 td small{color:#566;font-size:10.5px}.rt2 .m{font-weight:700}
-.rt2 tfoot td{font-weight:800;background:#e9f4fb!important;border-top:1.5px solid var(--rl);text-align:center}
-.rpf{display:none}
-@media print{
-  .rdp{border:0;border-radius:0;padding:0;margin:0}
-  .rpg{height:268mm;display:flex;flex-direction:column;page-break-after:always;overflow:hidden}.rpg:last-child{page-break-after:auto}
-  .rt2 td:not(.n){min-width:0}.rt2 td.n{white-space:normal}.rpg .rtw2{overflow:visible}.rt2{font-size:10px}.rt2 td{padding:6px 6px}.rt2 th{padding:8px 6px}
-  .rpf{display:flex;justify-content:space-between;align-items:center;margin-top:auto;background:#eef2f6;border-radius:10px;padding:8px 14px;font-size:10px;color:#5a6670}
-  .rpm{display:flex;align-items:center;gap:6px}.rpi{width:16px;height:16px;border-radius:4px;background:center/contain no-repeat}
-  .rsc{break-inside:avoid}
-}
 /* چاپ */
 #printroot{display:none}
 .phd{display:flex;align-items:center;gap:12px;border-bottom:3px solid #04234b;padding-bottom:8px;margin-bottom:10px}.phd b{font-size:18px;color:#04234b;display:block}.phd small{color:#555}.phl{width:54px;height:54px;border-radius:12px;border:1px solid #ddd;background:#fff center/contain no-repeat}.phdate{margin-right:auto}
@@ -324,6 +293,20 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 
 .bcbox{position:relative}.bcl{position:absolute;left:8%;right:8%;top:50%;height:2px;background:#ff3b30;box-shadow:0 0 8px #ff3b30;animation:bcl 1.6s ease-in-out infinite alternate;pointer-events:none}@keyframes bcl{from{top:35%}to{top:65%}}
 .pchips{margin:-4px 0 8px}.pchips small.mut{display:block;margin-bottom:6px}
+/* حس و حال: بازخورد لمس و انیمیشن نرم */
+.wrn{color:var(--amber)}
+.toast{animation:toastin .25s cubic-bezier(.2,.9,.3,1.2)}
+.toast:not(.err)::before{content:"✓";display:inline-block;margin-left:8px;color:#4ade80;font-weight:800}
+.toast.err::before{content:"!";display:inline-block;margin-left:8px;font-weight:800}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,12px) scale(.96)}to{opacity:1;transform:translate(-50%,0) scale(1)}}
+.tap{transition:transform .12s ease,filter .12s ease,background-color .15s ease}
+.tap:active{transform:scale(.97);filter:brightness(.95)}
+.row.tap:active{background:var(--soft)}
+.btn{transition:transform .12s ease,box-shadow .15s ease}
+.chip{transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.sw .sheet{animation:sheetup .26s cubic-bezier(.2,.9,.25,1)}
+@keyframes sheetup{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
 </style>
 <div id="app"><main id="main"></main><nav class="bar" id="nav" aria-label="بخش‌های اصلی"></nav></div><div id="pages"></div><div id="sheets"></div>
@@ -1988,7 +1971,7 @@ const MOKW = { anbar: 'انبارگردان شمارش pda بارکد برچسب
 const moN = t => String(t || '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).replace(/[۰-۹]/g, c => '۰۱۲۳۴۵۶۷۸۹'.indexOf(c)).replace(/[\u200c\u200f]/g, ' ').toLowerCase();
 let moQ = '';
 function moItems() {
-  return [['sms', 'note', 'قالب‌های پیامک و فاکتور متنی', 'نام شرکت، متن خوش‌آمدگویی و تشکر، اعتبار پیش‌فاکتور'], ['anbar', 'check', 'انبارگردان (فایل)', 'کالاها را برای اپ انبارگردان بفرست و نتیجه‌ی شمارش را وارد کن'], ['today', 'calendar', 'امروز', 'فروش و سود امروز، سررسیدها و کارهای مهم'], ['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['pinv', 'file', 'پیش‌فاکتورها', 'صدور پیش‌فاکتور قبل از ارسال بار'], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس، قیمت، تاریخ تولید و انقضا برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'تم روز و شب، قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
+  return [['purch', 'cart', 'پیشنهاد خرید هوشمند', 'کالاهای رو به اتمام و تعداد پیشنهادی برای خرید بر اساس فروش ۳۰ روز اخیر'], ['sms', 'note', 'قالب‌های پیامک و فاکتور متنی', 'نام شرکت، متن خوش‌آمدگویی و تشکر، اعتبار پیش‌فاکتور'], ['anbar', 'check', 'انبارگردان (فایل)', 'کالاها را برای اپ انبارگردان بفرست و نتیجه‌ی شمارش را وارد کن'], ['today', 'calendar', 'امروز', 'فروش و سود امروز، سررسیدها و کارهای مهم'], ['stats', 'chart', 'آمار و سود', 'تحلیل فروش، محصول برتر و نمودارها'], ['partners', 'users', 'شرکا', 'سهم سود و حساب هر شریک'], ['preorders', 'cart', 'سفارشات ویزیتورها', preSub()], ['pinv', 'file', 'پیش‌فاکتورها', 'صدور پیش‌فاکتور قبل از ارسال بار'], ['catalog', 'box', 'کاتالوگ محصولات', 'عکس، قیمت، تاریخ تولید و انقضا برای اپ ثبت سفارشات'], ['visitors', 'brief', 'ویزیتورها', 'پورسانت و حقوق ویزیتور'], ['vroute', 'route', 'مسیر ویزیتورها', 'مناطق، فروشگاه‌ها و برنامهٔ روزانه'], ['reports', 'chart', 'گزارش‌ها', 'فروش، سود و سهم‌ها'], ['ledgers', 'book', 'دفترها', 'ساخت و تغییر دفتر'], ['profile', 'store', 'پروفایل کسب‌وکار', 'نام، لوگو، آدرس، تلفن، کارت و شبا'], ['invset', 'file', 'تنظیمات فاکتور', 'ستون‌ها، نام‌ها، رنگ، مهر و متن‌های آماده'], ['settings', 'gear', 'تنظیمات', 'تم روز و شب، قیمت تمام‌شده، مالیات، واحد پول'], ['cheques', 'bank', 'چک‌ها', 'دریافتی و پرداختی، سررسید و وصول'], ['rem', 'calendar', 'یادآوری‌ها', remSub()], ['stocktake', 'box', 'انبارگردانی', 'شمارش و اصلاح موجودی انبار'], ['stockmove', 'box', 'ورود، خروج، مصرف و ضایعات', 'ثبت حرکت کالا بدون خرید و فروش'], ['stockrep', 'chart', 'گزارش مصرف و ضایعات', 'ورود، خروج، مصرف داخلی و ضایعات'], ['sync', 'cloud', 'همگام‌سازی ابری', sySub()], ['lock', 'shield', 'قفل برنامه', lockSub()], ['snaps', 'undo', 'نقاط بازگشت', 'بازگشت به قبل از حذف یا تغییر'], ['backup', 'shield', 'پشتیبان‌گیری', 'ذخیره و بازیابی اطلاعات']];
 }
 function moList() {
   const all = moItems(), q = moN(moQ).trim(); let items = all, note = '';
@@ -2729,6 +2712,9 @@ function openSettings() {
   const s = S.settings, locked = S.docs.length > 0;
   openPage({ title: 'تنظیمات', body: '<div class="f"><label>واحد پول</label><div style="padding-top:8px">' + chipsH('cur', [['ریال', 'ریال'], ['تومان', 'تومان']], s.currency) + '</div></div><div class="hint">فقط نمایش را عوض می‌کند و عددها تبدیل نمی‌شوند.</div>' +
     '<div class="f"><label>تم برنامه</label><div style="padding-top:8px">' + chipsH('thm', [['auto', 'خودکار'], ['light', 'روز'], ['dark', 'شب']], s.theme || 'auto') + '</div></div>' +
+    '<div class="f"><label>اندازه‌ی نوشته‌ها و محیط برنامه</label><div style="padding-top:8px">' + chipsH('fsz', [['90', 'کوچک'], ['100', 'عادی'], ['110', 'بزرگ'], ['120', 'خیلی بزرگ']], String(s.fsz || 100)) + '</div></div>' +
+    '<div class="f"><label>رنگ اصلی برنامه</label><div style="padding-top:8px">' + chipsH('acc', [['def', 'پیش‌فرض'], ['#0b6fa4', 'آبی'], ['#0b8a4a', 'سبز'], ['#8e24aa', 'بنفش'], ['#c2410c', 'نارنجی'], ['#111827', 'مشکی']], s.accent || 'def') + '</div></div>' +
+    '<div class="hint">راهنمای رنگ‌ها در سراسر برنامه: سبز = به نفع شما (دریافت، بستانکار، سود)، قرمز = بدهی یا هشدار، زرد = نزدیک سررسید یا انقضا.</div>' +
     '<div class="f"><label>روش محاسبه‌ی قیمت خرید (برای سود فروش‌های جدید)</label><div style="padding-top:8px">' + chipsH('cost', [['fifo', 'فاکتور خرید (FIFO)'], ['avg', 'میانگین'], ['last', 'آخرین خرید']], s.costMode) + '</div></div><div class="hint" id="costd">' + COSTD[s.costMode] + '</div><div class="hint">سود فروش‌های قبلی بعد از تغییر دوباره حساب نمی‌شود.</div>' +
     '<div class="f"><label for="stax">مالیات بر ارزش افزوده (٪)</label><input id="stax" data-in="set" data-k="tax" inputmode="decimal" value="' + fa(s.taxRate) + '"></div>' +
     '<div class="f"><label for="sns">شماره‌ی فاکتور فروش بعدی</label><input id="sns" data-in="set" data-k="ns" inputmode="numeric" value="' + fa(s.nextSale) + '"></div><div class="f"><label for="snb">شماره‌ی فاکتور خرید بعدی</label><input id="snb" data-in="set" data-k="nb" inputmode="numeric" value="' + fa(s.nextBuy) + '"></div>' +
@@ -4052,8 +4038,8 @@ const FNT = (w, s) => w + ' ' + s + 'px Vazirmatn, Tahoma, system-ui, sans-serif
 const cardFmt = s => fa(en(s)).replace(/(.{4})/g, '$1 ').trim();
 async function invoiceCanvas(id) {
   const D_ = L.invoiceData(S, id); if (!D_) return null; const P = prof(), iv = ivs(), hb = iv.hideBal || D_.pre, preTxt = () => 'این پیش‌فاکتور تا تاریخ ' + fdate(D_.ts + (+en(iv.preDays || 3) || 3) * 864e5) + ' معتبر است و جایگزین فاکتور رسمی نیست.';
-  const W = 540, SC = 3, PD = 22, navy = iv.color, orange = '#ffa000', ink = '#13183a', mut = '#6a7392', ln = '#d9e2f2', soft = '#f3f6fc', grn = '#13803c', red = '#b3122b';
-  const sale = D_.type === 'sale', bret = D_.type === 'bret', retn = D_.type === 'sret' || bret;
+  const tpl = iv.tpl || 'std', W = 540, SC = 3, PD = 22, navy = tpl === 'simple' ? '#222' : iv.color, orange = tpl === 'simple' ? '#bbb' : '#ffa000', ink = '#13183a', mut = '#6a7392', ln = '#d9e2f2', soft = '#f3f6fc', grn = '#13803c', red = '#b3122b';
+  const hc = tpl === 'simple' ? '#fff' : '#fff', sale = D_.type === 'sale', bret = D_.type === 'bret', retn = D_.type === 'sret' || bret;
   const title = D_.pre ? LB('t_pre') : sale ? LB('t_sale') : bret ? 'رسید مرجوعی خرید' : retn ? 'رسید مرجوعی فروش' : LB('t_buy');
   const stImg = iv.stamp ? await loadImg(iv.stamp) : null;
   try { await Promise.race([Promise.all([document.fonts.load(FNT(400, 14)), document.fonts.load(FNT(600, 14)), document.fonts.load(FNT(700, 14))]), new Promise(r => setTimeout(r, 2500))]); } catch (e) {}
@@ -4094,11 +4080,11 @@ async function invoiceCanvas(id) {
     const cw = { tot: 100, pr: 94, qty: 84, no: 28 }; cw.nm = (W - 2 * PD) - cw.tot - cw.pr - cw.qty - cw.no;
     const xNo = R_, xNm = R_ - cw.no, xQty = xNm - cw.nm, xPr = xQty - cw.qty, xTot = xPr - cw.pr;
     RR(L_, y, W - 2 * PD, 30, 10, navy);
-    T('#', xNo - cw.no / 2, y + 20, { a: 'center', s: 11.5, c: '#fff' }); T('نام محصول', xNm - 8, y + 20, { s: 12, c: '#fff' });
-    T('تعداد / واحد', xQty - cw.qty / 2, y + 20, { a: 'center', s: 11.5, c: '#fff' }); T('قیمت واحد (' + cu + ')', xPr - cw.pr / 2, y + 20, { a: 'center', s: 11.5, c: '#fff' }); T('مبلغ کل (' + cu + ')', xTot - cw.tot / 2, y + 20, { a: 'center', s: 11.5, c: '#fff' });
+    T('#', xNo - cw.no / 2, y + 20, { a: 'center', s: 11.5, c: hc }); T('نام محصول', xNm - 8, y + 20, { s: 12, c: hc });
+    T('تعداد / واحد', xQty - cw.qty / 2, y + 20, { a: 'center', s: 11.5, c: hc }); T('قیمت واحد (' + cu + ')', xPr - cw.pr / 2, y + 20, { a: 'center', s: 11.5, c: hc }); T('مبلغ کل (' + cu + ')', xTot - cw.tot / 2, y + 20, { a: 'center', s: 11.5, c: hc });
     y += 30;
     D_.items.forEach((it, i) => {
-      const nl = wrap(it.name, cw.nm - 14, { w: 600, s: 13 }).slice(0, 3), rh = Math.max(34, nl.length * 17 + 14);
+      const nl = wrap(it.name, cw.nm - 14, { w: 600, s: 13 }).slice(0, 3), rh = Math.max(tpl === 'compact' ? 26 : 34, nl.length * (tpl === 'compact' ? 15 : 17) + (tpl === 'compact' ? 8 : 14));
       if (i % 2 === 1) { if (!dry) { ctx.fillStyle = soft; ctx.fillRect(L_, y, W - 2 * PD, rh); } }
       const cy = y + rh / 2 + 4;
       T(fa(i + 1), xNo - cw.no / 2, cy, { a: 'center', s: 12, c: mut });
@@ -4115,7 +4101,7 @@ async function invoiceCanvas(id) {
     if (D_.tax) row('مالیات', money(D_.tax) + ' ' + cu);
     if (D_.extra) row('هزینه‌های جانبی', money(D_.extra) + ' ' + cu);
     if (D_.freight) row('کرایه بار', money(D_.freight) + ' ' + cu);
-    ty += 4; RR(tx, ty, tw, 38, 10, navy); T(retn ? 'جمع مبلغ مرجوعی' : LB('i_total'), rx, ty + 24, { w: 700, s: 13.5, c: '#fff' }); T(money(D_.total) + ' ' + cu, lx, ty + 24, { a: 'left', w: 700, s: 14.5, c: '#fff' }); ty += 50;
+    ty += 4; RR(tx, ty, tw, 38, 10, navy); T(retn ? 'جمع مبلغ مرجوعی' : LB('i_total'), rx, ty + 24, { w: 700, s: 13.5, c: hc }); T(money(D_.total) + ' ' + cu, lx, ty + 24, { a: 'left', w: 700, s: 14.5, c: hc }); ty += 50;
     const sgn = bret ? 1 : retn ? -1 : sg, pv = D_.prev, gross = pv + sgn * D_.total, a = st_(D_.after), p0 = st_(pv), g0 = st_(gross);
     ty += 4;
     if (!hb) row('مانده از قبل', Math.abs(pv) < 1 ? 'تسویه' : money(Math.abs(pv)) + ' ' + cu + ' (' + p0[0] + ')', { c: p0[1] });
@@ -4366,61 +4352,17 @@ function cellH(v, c, tone) {
   if (c.t === 'num') return qf(v);
   return esc(v).replace(/\n/g, '<br>');
 }
-const rvTone = t => t === 'pos' ? 'g' : t === 'neg' ? 'r' : (t || '');
-function rvHead(m) {
-  const P = prof(), ln = [P.owner, P.phone].filter(Boolean).join(' - ');
-  return '<div class="rph"><div class="rpt">' + esc(m.title) + '</div><div class="rpr"><span class="phl" style="background-image:url(\'' + (P.logo || BRAND.icon) + '\')"></span><div><b>' + esc(bizName()) + '</b>' + (ln ? '<small>' + esc(ln) + '</small>' : '') + (P.address ? '<small>آدرس : ' + esc(P.address) + '</small>' : '') + '</div></div>' +
-    '<div class="rpl"><small>تاریخ صدور : ' + fdate(Date.now()) + '</small>' + (m.subtitle ? '<small>' + esc(m.subtitle) + '</small>' : '') + (m.party ? '<small>طرف‌حساب : ' + esc([m.party.name, m.party.mobile].filter(Boolean).join(' - ')) + '</small>' + (m.party.address ? '<small>' + esc(m.party.address) + '</small>' : '') : '') + '</div></div>';
-}
-function rvSum(m) {
-  return '<div class="rsm"><div class="rsm-in">' + m.summary.map(s => '<div class="rsc' + (s.strong ? ' st' : '') + '"><small>' + esc(s.l) + '</small><b class="' + (s.kind === 'bal' ? (s.v > 0.5 ? 'r' : s.v < -0.5 ? 'g' : '') : rvTone(s.tone)) + '">' + (s.kind === 'bal' ? (Math.abs(s.v) < 1 ? 'تسویه' : money(Math.abs(s.v)) + ' <i>' + balStatus(s.v) + '</i>') : money(s.v)) + '</b>' + (s.sub ? '<em>' + esc(s.sub) + '</em>' : '') + '</div>').join('') + '</div>' + (m.note ? '<div class="rsn">نکته: ' + esc(m.note) + '</div>' : '') + '</div>';
-}
-function rvCell(v, c, tone) {
-  if (v === '' || v == null) return '';
-  if (c.t === 'money') return '<span class="m ' + rvTone(tone) + '">' + money(v) + '</span>';
-  if (c.t === 'num') return '<span class="m">' + qf(v) + '</span>';
-  const t = String(v); if (t.indexOf('\n') < 0) return esc(t);
-  const parts = t.split('\n'); return '<b>' + esc(parts[0]) + '</b><br><small>' + parts.slice(1).map(esc).join('<br>') + '</small>';
-}
-const rvTh = sh => '<thead><tr>' + sh.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead>';
-const rvTr = (sh, r, i) => '<tr>' + r.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + rvCell(v, sh.cols[k], sh.tones && sh.tones[i]) + '</td>').join('') + '</tr>';
-const rvFoot = sh => sh.foot ? '<tfoot><tr>' + sh.foot.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + (typeof v === 'number' ? money(v) : esc(v)) + '</td>').join('') + '</tr></tfoot>' : '';
-const rvEmpty = sh => '<tr><td colspan="' + sh.cols.length + '" class="mut" style="text-align:center;padding:16px">موردی در این بازه نیست.</td></tr>';
 function modelHtml(m) {
-  let h = '<div class="rdoc rdp">' + rvHead(m) + rvSum(m);
-  m.sheets.forEach(sh => {
+  let h = '<div class="rdoc"><div class="rhead"><b>' + esc(m.title) + '</b><small>' + esc(m.subtitle || '') + '</small>' + (m.party ? '<small>' + esc([m.party.name, m.party.mobile, m.party.address].filter(Boolean).join(' • ')) + '</small>' : '') + '</div>';
+  h += '<div class="rsum">' + m.summary.map(s => '<div class="rs' + (s.strong ? ' st' : '') + '"><small>' + esc(s.l) + '</small><b class="' + (s.kind === 'bal' ? (s.v > 0.5 ? 'pos' : s.v < -0.5 ? 'neg' : '') : (s.tone || '')) + '">' + (s.kind === 'bal' ? (Math.abs(s.v) < 1 ? 'تسویه' : money(Math.abs(s.v)) + ' <i>' + balStatus(s.v) + '</i>') : money(s.v)) + '</b>' + (s.sub ? '<em>' + esc(s.sub) + '</em>' : '') + '</div>').join('') + '</div>';
+  if (m.note) h += '<div class="hint">' + esc(m.note) + '</div>';
+  m.sheets.forEach((sh, si) => {
     if (m.sheets.length > 1) h += '<h4 class="rh4">' + esc(sh.name) + '</h4>';
-    h += '<div class="rtw2"><table class="rt2">' + rvTh(sh) + '<tbody>' + (sh.rows.map((r, i) => rvTr(sh, r, i)).join('') || rvEmpty(sh)) + '</tbody>' + rvFoot(sh) + '</table></div>';
+    h += '<div class="rtw"><table class="rt"><thead><tr>' + sh.cols.map(c => '<th>' + esc(c.h) + '</th>').join('') + '</tr></thead><tbody>' +
+      (sh.rows.map((r, i) => '<tr>' + r.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + cellH(v, sh.cols[k], sh.tones && sh.tones[i]) + '</td>').join('') + '</tr>').join('') || '<tr><td colspan="' + sh.cols.length + '" class="mut" style="text-align:center;padding:16px">موردی در این بازه نیست.</td></tr>') + '</tbody>' +
+      (sh.foot ? '<tfoot><tr>' + sh.foot.map((v, k) => '<td class="' + (sh.cols[k].t !== 'text' ? 'n' : '') + '">' + (typeof v === 'number' ? money(v) : esc(v)) + '</td>').join('') + '</tr></tfoot>' : '') + '</table></div>';
   });
   return h + '</div>';
-}
-/* چاپ: صفحه‌بندی A4 با هدر و فوتر تکرارشونده */
-function rvRowMm(sh, r) {
-  let ln = 1;
-  r.forEach((v, k) => { const c = sh.cols[k]; if (v == null || v === '' || c.t !== 'text') return; String(v).split('\n').length; const w = Math.max(6, (c.w || 12) * 1.15); const n = String(v).split('\n').reduce((a, x) => a + Math.max(1, Math.ceil(x.length / w)), 0); if (n > ln) ln = n; });
-  return 5.5 + 4.6 * ln;
-}
-function rvPrintPages(m) {
-  const BODY = 212, pages = []; let cur = null, left = 0, first = true;
-  const open = () => { cur = { html: '' }; pages.push(cur); left = BODY - (first ? 36 + 34 + (m.note ? 9 : 0) : 22); first = false; };
-  open();
-  m.sheets.forEach((sh, si) => {
-    let rows = sh.rows.map((r, i) => ({ r, i, h: rvRowMm(sh, r) })); if (!rows.length) rows = [{ empty: 1, h: 12 }];
-    const foot = sh.foot ? 9 : 0, title = m.sheets.length > 1 ? 9 : 0;
-    let k = 0, firstChunk = true;
-    while (k < rows.length) {
-      const need = 9 + (firstChunk ? title : 0) + rows[k].h; if (left < need && cur.html) open();
-      let used = 9 + (firstChunk ? title : 0), chunk = [];
-      while (k < rows.length && used + rows[k].h + (k === rows.length - 1 ? foot : 0) <= left) { used += rows[k].h; chunk.push(rows[k]); k++; }
-      if (!chunk.length) { chunk.push(rows[k]); used += rows[k].h; k++; }
-      const last = k >= rows.length;
-      cur.html += (firstChunk && title ? '<h4 class="rh4">' + esc(sh.name) + '</h4>' : '') + '<div class="rtw2"><table class="rt2">' + rvTh(sh) + '<tbody>' + chunk.map(x => x.empty ? rvEmpty(sh) : rvTr(sh, x.r, x.i)).join('') + '</tbody>' + (last ? rvFoot(sh) : '') + '</table></div>';
-      left -= used + (last ? foot : 0) + 3; firstChunk = false;
-      if (!last) open();
-    }
-  });
-  const n = pages.length;
-  return pages.map((pg, i) => '<div class="rpg rdp">' + rvHead(m).replace(/<div class="rpt">[^<]*<\/div>/, i ? '<div class="rpt">' + esc(m.title) + '</div>' : '<div class="rpt">' + esc(m.title) + '</div>') + (i ? '' : rvSum(m)) + pg.html + '<div class="rpf"><span>صفحه ' + fa(i + 1) + ' از ' + fa(n) + '</span><span class="rpm"><span class="rpi" style="background-image:url(\'' + BRAND.icon + '\')"></span>طراحی و صدور این گزارش توسط نرم‌افزار <b>دفتر فروش</b> انجام شده است.</span></div></div>').join('');
 }
 chipH.rvf = v => { if (v === 'custom') { rng = ui.custom ? { ...ui.custom } : { from: L.dayStart(Date.now()), to: L.dayStart(Date.now()) + 86399999 }; rng.w = openSheet('<div id="rbox"></div>', () => drawRange()); rng.cb = () => { rv.f = 'custom'; rvDraw(); }; return; } rv.f = v; rvDraw(); };
 function rvDraw() {
@@ -4436,7 +4378,7 @@ A['rv-xls'] = () => {
   try { const m = rv.m; const bytes = XL.build(m); const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }); shareFile(blob, fileName(m.title + '-' + fdate(Date.now()).replace(/\//g, '-'), 'xlsx'), m.title); }
   catch (e) { toast('ساخت فایل اکسل ممکن نشد.', 1); }
 };
-A['rv-print'] = () => printHtml(rvPrintPages(rv.m), 'rep');
+A['rv-print'] = () => printHtml(printHead() + modelHtml(rv.m), 'rep');
 A['rep-ledger'] = () => ui.sub === 'parties' ? openReport('parties', { ledgerId: S.activeLedger }) : openReport('txns', { ledgerId: S.activeLedger, title: 'گزارش تراکنش‌ها', sub: ledger().name });
 A['rep-inv'] = () => openReport('inv', {});
 A['rep-accts'] = () => openReport('accts', {});
@@ -4543,6 +4485,7 @@ function openInvSet() {
       '<div class="f"><label for="ivp">پیشوند شماره‌ی فاکتور (اختیاری، مثلاً ۱۴۰۵-)</label><input id="ivp" data-in="ivt" data-k="prefix" value="' + esc(s.prefix) + '" autocomplete="off"></div>' +
       '<div class="f"><label for="ivo">متن پایین فاکتور رسمی (خالی = متن پیش‌فرض)</label><textarea id="ivo" data-in="ivt" data-k="offFooter" placeholder="' + esc(IVLD.disc) + '">' + esc(s.offFooter) + '</textarea></div>' +
       '<div class="f"><label for="ivi">متن پایین فاکتور تصویری (غیررسمی)</label><input id="ivi" data-in="prof" data-k="invFooter" value="' + esc(P.invFooter || '') + '" placeholder="طراحی و صدور فاکتور توسط دفتر فروش بارینو" autocomplete="off"></div></div>' +
+    '<div class="box sec"><b>قالب فاکتور تصویری</b><div style="padding-top:8px">' + chipsH('ivtpl', [['std', 'استاندارد'], ['simple', 'ساده (کم‌رنگ و ارزان برای چاپ)'], ['compact', 'فشرده (ردیف‌های کوتاه)']], s.tpl || 'std') + '</div></div>' +
     '<div class="box sec"><b>رفتار</b><div class="f"><label>نوع پیش‌فرض خروجی فاکتور فروش و خرید</label><div style="padding-top:8px">' + chipsH('ivdm', [['inf', 'غیررسمی'], ['off', 'رسمی']], s.defMode) + '</div></div>' +
       rgH('perPage', 'تعداد قلم در هر صفحه‌ی فاکتور رسمی', s.perPage, 3, 8, 1, ' قلم') + '<div class="hint">بیشتر از ۷ قلم ردیف‌ها را کمی فشرده می‌کند. شماره‌ی فاکتور بعدی را از «تنظیمات» اصلی عوض کنید.</div></div>' +
     '<div class="box sec"><b>مهر و امضای تصویری فروشنده</b><div class="mrow"><div id="ivst" style="width:110px;height:64px;border-radius:12px;background:var(--bg) center/contain no-repeat;border:1px solid var(--line,#ddd)"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><button class="btn tap" data-a="ivs-stamp">' + ico('image', 18) + 'انتخاب عکس مهر</button><button class="btn ghost tap" data-a="ivs-stamp0">حذف مهر</button></div></div><input type="file" id="ivsf" accept="image/*" hidden><div class="hint">بهتر است عکس مهر روی زمینه‌ی سفید یا شفاف باشد.</div></div>' +
@@ -4564,6 +4507,7 @@ A['ivs-stamp0'] = t => { ivs().stamp = ''; save(); stDraw(t.closest('.page')); }
 A['ivs-tpadd'] = t => { ivs().tpls.push({ t: 'قالب جدید', x: '' }); save(); tpDraw(t.closest('.page')); };
 A['ivs-tpdel'] = t => { ivs().tpls.splice(+t.dataset.i, 1); save(); tpDraw(t.closest('.page')); };
 chipH.ivdm = v => { ivs().defMode = v; save(); };
+chipH.ivtpl = v => { ivs().tpl = v; save(); };
 I.ivr = t => { const s = ivs(), k = t.dataset.k, v = +t.value; if (k === 'cw') s.cw[t.dataset.sub] = v; else s[k] = v; const l = $('#rv_' + k + (t.dataset.sub ? '_' + t.dataset.sub : ''), t.closest('.page')); if (l) l.textContent = fa(v) + (k === 'perPage' ? ' قلم' : k === 'cw' ? '' : '٪'); save(); };
 I.ivt = t => { ivs()[t.dataset.k] = t.value; save(); };
 I.ivl = t => { const s = ivs(); s.lb = s.lb || {}; s.lb[t.dataset.k] = t.value; save(); };
@@ -4578,8 +4522,16 @@ document.addEventListener('change', e => {
 A['inv-tpl'] = t => { const x = (ivs().tpls[+t.dataset.i] || {}).x || '', ta = $('#inote', t.closest('.page') || document); if (!ta || !inv) return; ta.value = (ta.value ? ta.value.trim() + '\n' : '') + x; inv.d.note = ta.value; };
 /* تم روز و شب */
 function applyTheme() { const t = (S.settings && S.settings.theme) || 'auto', r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); try { const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = (t === 'dark' || (t === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches)) ? '#0e1424' : '#04234b'; } catch (e) {} }
-chipH.thm = v => { S.settings.theme = v; save(); applyTheme(); };
-applyTheme();
+function mixW(hex, k) { const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(x => Math.round(x + (255 - x) * k)); return '#' + c.map(x => x.toString(16).padStart(2, '0')).join(''); }
+function applyLook() {
+  const st = S.settings || {}, r = document.documentElement, dark = st.theme === 'dark' || ((st.theme || 'auto') === 'auto' && matchMedia('(prefers-color-scheme:dark)').matches);
+  if (st.accent && /^#[0-9a-f]{6}$/i.test(st.accent)) { const a = dark ? mixW(st.accent, .4) : st.accent; r.style.setProperty('--accent', a); r.style.setProperty('--head', dark ? mixW(st.accent, .05) : st.accent); r.style.setProperty('--soft', mixW(st.accent, dark ? 0 : .9) + (dark ? '33' : '')); } else { ['--accent', '--head', '--soft'].forEach(k => r.style.removeProperty(k)); }
+  r.style.zoom = String((+st.fsz || 100) / 100);
+}
+chipH.thm = v => { S.settings.theme = v; save(); applyTheme(); applyLook(); };
+chipH.fsz = v => { S.settings.fsz = +v; save(); applyLook(); };
+chipH.acc = v => { S.settings.accent = v === 'def' ? '' : v; save(); applyLook(); };
+applyTheme(); applyLook();
 I.moq = t => { moQ = t.value; const l = $('#mol'); if (l) l.innerHTML = moList(); };
 A['mo-clr'] = () => { moQ = ''; render(); };
 
@@ -4766,10 +4718,10 @@ A['sms-set'] = () => {
   p.body.innerHTML = '<div class="hint" style="margin-top:12px">در متن‌ها می‌توانی از این جاگذارها استفاده کنی: {نام} {شرکت} {شماره} {مبلغ} {مانده} {تاریخ}</div>' +
     field('نام شرکت (در پیام‌ها و فاکتور متنی)', 'sm-co', s.co) + area('متن حساب بانکی/کارت (ته فاکتور متنی؛ اختیاری)', 'sm-bank', s.bank) +
     field('اعتبار پیش‌فاکتور (ساعت)', 'sm-pre', fa(s.preH || 72)) +
-    '<button class="chk tap" data-a="sms-th" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b" id="sm-thb">' + (s.thanks ? ico('check', 16) : '') + '</span> بعد از ثبت فروش، پیشنهاد پیام تشکر/خوش‌آمد نشان بده</button>' +
+    '<button class="chk tap' + (s.thanks ? ' on' : '') + '" data-a="sms-th" style="margin-top:6px;padding:10px 12px;border-radius:var(--r-sm);background:var(--card)"><span class="b">' + ico('check', 16) + '</span> بعد از ثبت فروش، پیشنهاد پیام تشکر/خوش‌آمد نشان بده</button>' +
     s.tpls.map((x, i) => area(esc(x.n), 'sm-t' + i, x.t)).join('');
 };
-A['sms-th'] = () => { const s = smsS(); s.thanks = !s.thanks; $('#sm-thb').innerHTML = s.thanks ? ico('check', 16) : ''; };
+A['sms-th'] = t => { const s = smsS(); s.thanks = !s.thanks; t.classList.toggle('on', s.thanks); save(); };
 A['sms-save'] = t => { const s = smsS(); s.co = ($('#sm-co').value || '').trim() || SMS_D.co; s.bank = $('#sm-bank').value.trim(); s.preH = +smsEn($('#sm-pre').value) || 72; s.tpls.forEach((x, i) => { const e = $('#sm-t' + i); if (e && e.value.trim()) x.t = e.value; }); save(); closePage ? closePage(t.closest('.page')) : 0; toast('ذخیره شد'); };
 A['go-sms'] = () => A['sms-set']();
 /* پیشنهاد پیام بعد از ثبت فروش */
@@ -4781,6 +4733,38 @@ A['inv-save'] = t => {
   const first = S.docs.filter(x => x.type === 'sale' && x.partyId === pid).length === 1, s = smsS(), tp = s.tpls.find(q => q.id === (first ? 'welcome' : 'thanks'));
   setTimeout(() => openSheet('<h3 class="st">' + (first ? 'مشتری جدید: ارسال پیام خوش‌آمد؟' : 'ارسال پیام تشکر به مشتری؟') + '</h3><textarea id="smt" class="inp" rows="6" style="width:100%;min-height:130px;direction:rtl">' + esc(smsFill(tp.t + (first ? '\n' + smsFill(s.tpls.find(q => q.id === 'thanks').t, pt, d) : ''), pt, d)) + '</textarea>' + smsSendBtns(pt.mobile, pid) + '<button class="btn ghost tap" data-a="sclose" style="margin-top:8px">فعلاً نه</button>'), 400);
 };
+
+/* ===== پیشنهاد خرید هوشمند ===== */
+function spCalc() {
+  const st = S.settings, tgt = +st.spTarget || 30, lead = +st.spLead || 7, now = Date.now(), from = now - 30 * 864e5, rows = [];
+  const sold = {}, first = {}, lastBuy = {};
+  for (const d of S.docs) {
+    if (!d.items) continue;
+    if (d.type === 'sale' || d.type === 'sret') for (const i of d.items) { if (d.ts < from) continue; const q = (d.type === 'sale' ? 1 : -1) * (i.qty || 0); sold[i.pid] = (sold[i.pid] || 0) + q; first[i.pid] = Math.min(first[i.pid] || now, d.ts); }
+    if (d.type === 'buy') for (const i of d.items) if (!lastBuy[i.pid] || d.ts > lastBuy[i.pid].ts) lastBuy[i.pid] = { ts: d.ts, price: i.price };
+  }
+  for (const p of S.products) {
+    const q = Math.max(0, sold[p.id] || 0); if (!q && !(p.min && L.stockOf(S, p.id) <= p.min)) continue;
+    const days = Math.min(30, Math.max(7, Math.ceil((now - (first[p.id] || now)) / 864e5) + 1)), rate = q / days, stock = L.stockOf(S, p.id);
+    const left = rate > 0 ? stock / rate : Infinity, need = Math.max(0, Math.ceil(rate * (tgt + lead) - stock));
+    if (!need && left > tgt + lead) continue;
+    rows.push({ p, rate, stock, left, need, price: (lastBuy[p.id] || {}).price || 0, lvl: left <= lead ? 'r' : left <= tgt ? 'y' : 'g' });
+  }
+  rows.sort((a, b) => a.left - b.left); return { rows, tgt, lead };
+}
+function spText(rows) { return 'سفارش خرید — ' + smsS().co + '\n' + fdate(Date.now()) + '\n— — —\n' + rows.filter(r => r.need > 0).map((r, i) => fa(i + 1) + '. ' + r.p.name + ' — ' + qf(r.need) + ' ' + (r.p.unit || '')).join('\n'); }
+A['go-purch'] = () => {
+  const p = openPage({ title: 'پیشنهاد خرید هوشمند', body: '', foot: '<button class="btn tap" data-a="sp-txt">متن سفارش (برای تأمین‌کننده)</button><button class="btn ghost tap" data-a="sp-set">تنظیم</button>' });
+  p.el._redraw = () => {
+    const c = spCalc(), tot = c.rows.reduce((a, r) => a + r.need * r.price, 0);
+    p.body.innerHTML = '<div class="hint" style="margin-top:12px">بر اساس فروش ۳۰ روز اخیر و موجودی فعلی: کالاهایی که تا ' + fa(c.lead) + ' روز آینده (زمان رسیدن بار) تمام می‌شوند قرمز، و تا ' + fa(c.tgt) + ' روز زردند. تعداد پیشنهادی برای پوشش ' + fa(c.tgt) + ' روز فروش است.</div>' +
+      (c.rows.length ? '<div class="count">' + fa(c.rows.length) + ' کالا' + (tot ? ' • برآورد هزینه ' + mu(tot) : '') + '</div><div class="list">' + c.rows.map(r => rowH({ a: 'prod', id: r.p.id, title: r.p.name, sub: 'موجودی ' + qf(r.stock) + ' • فروش روزانه ' + qf(Math.round(r.rate * 10) / 10) + (isFinite(r.left) ? ' • ' + fa(Math.floor(r.left)) + ' روز مانده' : ''), icon: 'box', av: r.lvl === 'r' ? 'red' : r.lvl === 'y' ? 'amber' : 'green', end: endH(r.need ? 'بخر: ' + qf(r.need) : 'کافی', r.price && r.need ? mu(r.need * r.price) : '', r.lvl === 'r' ? 'neg' : r.lvl === 'y' ? 'wrn' : 'pos') })).join('') + '</div>' : empty('فعلاً نیازی به خرید نیست', 'کالاها برای بیش از ' + fa(c.tgt + c.lead) + ' روز موجودی دارند.'));
+  };
+  p.el._redraw();
+};
+A['sp-txt'] = () => { const c = spCalc(); if (!c.rows.some(r => r.need > 0)) return toast('کالایی برای سفارش نیست.', 1); openSheet('<h3 class="st">متن سفارش خرید</h3><textarea id="smt" class="inp" rows="10" style="width:100%;min-height:200px;direction:rtl">' + esc(spText(c.rows)) + '</textarea>' + smsSendBtns('', '')); };
+A['sp-set'] = () => openSheet('<h3 class="st">تنظیم پیشنهاد خرید</h3>' + field('پوشش چند روز فروش را بخرم؟', 'sp-t', fa(S.settings.spTarget || 30)) + field('رسیدن بار از سفارش چند روز طول می‌کشد؟', 'sp-l', fa(S.settings.spLead || 7)) + '<div class="pr"><button class="btn tap" data-a="sp-save">ذخیره</button></div>');
+A['sp-save'] = t => { S.settings.spTarget = Math.max(1, +smsEn($('#sp-t').value) || 30); S.settings.spLead = Math.max(0, +smsEn($('#sp-l').value) || 7); save(); closeSheet(); const pg = pages[pages.length - 1]; pg && pg._redraw && pg._redraw(); toast('ذخیره شد'); };
 
 })();
 </script>
