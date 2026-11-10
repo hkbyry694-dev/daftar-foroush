@@ -311,6 +311,11 @@ details.tb summary{cursor:pointer;color:var(--accent);font-size:13px;padding:6px
 .av.img{background-color:#fff;background-size:contain;background-position:center;background-repeat:no-repeat;border:1px solid var(--line,#e3e6ef)}
 .av.img[style*="url('')"]{background-image:none!important}
 
+.cell b.wrap{text-align:right;white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word;line-height:1.7}
+.more-t{width:100%;display:flex;align-items:center;justify-content:center;gap:6px}.more-t .more-ar{transition:transform .2s}.more-t.on .more-ar{transform:rotate(180deg)}
+.more-p{margin-top:8px;padding:10px;background:var(--card);border-radius:var(--r-sm);animation:mpin .2s ease}@keyframes mpin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.cell b.neg{color:var(--red)}
+
 </style>
 <div id="app"><main id="main"></main><nav class="bar" id="nav" aria-label="بخش‌های اصلی"></nav></div><div id="pages"></div><div id="sheets"></div>
 <script>
@@ -2100,15 +2105,26 @@ I.pq = t => drawPP(t.closest('.sw'), t.value.trim());
 A['pp-pick'] = t => { const w = t.closest('.sw'), cb = w._cb; closeSheet(w); cb(party(t.dataset.id)); };
 A['pp-new'] = t => { const w = t.closest('.sw'), cb = w._cb; closeSheet(w); partySheet(null, cb); };
 
+let ppMore = false;
+A['pp-more'] = t => { ppMore = !ppMore; const pg = t.closest('.page'); pg._redraw && pg._redraw(); };
+function salesRows(f) { /* ردیف‌های فروش (منهای مرجوعی) در دفتر فعال */ const o = []; for (const d of S.docs) { if ((d.type !== 'sale' && d.type !== 'sret') || d.ledgerId !== S.activeLedger) continue; const sg = d.type === 'sret' ? -1 : 1; for (const i of d.items || []) if (f(d, i)) o.push({ d, i, qty: sg * Math.abs(i.qty), rev: sg * Math.abs(i.total || 0), pf: sg * Math.abs(i.profit || 0) }); } return o; }
+function topH(map, nm, unitOf) { const a = Object.values(map).sort((x, y) => y.rev - x.rev).slice(0, 5); return a.length ? '<div class="list">' + a.map(x => '<div class="row"><span class="tx"><b>' + esc(nm(x.k)) + '</b><small>' + fa(Math.round(x.qty * 100) / 100) + (unitOf ? ' ' + unitOf(x.k) : '') + '</small></span><span class="end"><b>' + mu(x.rev) + '</b><small>سود ' + mu(x.pf) + '</small></span></div>').join('') + '</div>' : ''; }
+function sumBy(rows, key) { const m = {}; for (const r of rows) { const k = key(r), x = m[k] || (m[k] = { k, qty: 0, rev: 0, pf: 0 }); x.qty += r.qty; x.rev += r.rev; x.pf += r.pf; } return m; }
+function partySalesH(id) { const rows = salesRows(d => d.partyId === id); if (!rows.length) return ''; const a = (L.analytics(S, { ledgerId: S.activeLedger }).byParty || []).find(x => x.partyId === id) || { rev: 0, profit: 0, count: 0 }; const mg = a.rev ? a.profit / a.rev * 100 : 0; return '<div class="sec"><h3>فروش و سود از این مشتری</h3><div class="boxes g2"><div class="cell"><small>جمع فروش به او</small><b>' + mu(a.rev) + '</b></div><div class="cell"><small>سود حاصل از او</small><b class="' + (a.profit < 0 ? 'neg' : 'pos') + '">' + mu(a.profit) + '</b></div><div class="cell"><small>تعداد فاکتور</small><b>' + fa(a.count) + '</b></div><div class="cell"><small>حاشیه سود</small><b>' + fa(Math.round(mg * 10) / 10) + '٪</b></div></div><div class="hint" style="margin-top:10px">بیشترین خرید او (بر اساس مبلغ):</div>' + topH(sumBy(rows, r => r.i.pid), k => (prod(k) || {}).name || 'کالا', k => (prod(k) || {}).unit || '') + '</div>'; }
+function prodSalesH(id) { const rows = salesRows((d, i) => i.pid === id); if (!rows.length) return '<div class="sec"><h3>فروش و سود</h3>' + empty('هنوز فروشی ثبت نشده') + '</div>'; const q = rows.reduce((s, r) => s + r.qty, 0), rv = rows.reduce((s, r) => s + r.rev, 0), pf = rows.reduce((s, r) => s + r.pf, 0), pr = prod(id) || {}, inv = new Set(rows.filter(r => r.d.type === 'sale').map(r => r.d.id)).size; return '<div class="sec"><h3>فروش و سود</h3><div class="boxes g2"><div class="cell"><small>مقدار فروخته‌شده</small><b>' + fa(Math.round(q * 100) / 100) + ' ' + (pr.unit || '') + '</b></div><div class="cell"><small>جمع فروش</small><b>' + mu(rv) + '</b></div><div class="cell"><small>سود کل</small><b class="' + (pf < 0 ? 'neg' : 'pos') + '">' + mu(pf) + '</b></div><div class="cell"><small>حاشیه سود</small><b>' + fa(Math.round((rv ? pf / rv * 100 : 0) * 10) / 10) + '٪</b></div><div class="cell"><small>تعداد فاکتور فروش</small><b>' + fa(inv) + '</b></div></div><div class="hint" style="margin-top:10px">بیشترین خریداران این کالا:</div>' + topH(sumBy(rows, r => r.d.partyId), k => (party(k) || {}).name || 'نامشخص') + '</div>'; }
 function openParty(id) {
   const draw = p => {
     const pt = party(id); if (!pt) return p.close();
     const b = balText(L.partyBal(S, id)), ds = applyDocs(S.docs.filter(d => d.partyId === id), 'docs');
     p.el.querySelector('h2').textContent = pt.name;
     p.body.innerHTML = '<div class="box" style="margin-top:12px"><div class="mut" style="font-size:12px">وضعیت</div><div style="font-size:20px;font-weight:700" class="' + b.c + '">' + (b.amt || 'تسویه') + ' <small style="font-size:13px">' + (b.amt ? b.t : '') + '</small>' + (b.t === 'بستانکار' ? '<div class="hint pos">مبلغ بیشتری از او دریافت شده؛ باید کالا بفروشی یا پولش را برگردانی.</div>' : '') + '</div>' +
-      '<div class="boxes g2" style="margin-top:8px"><button class="btn tap" data-a="pp-sale">' + ico('tag', 20) + 'فروش</button><button class="btn tap" data-a="pp-buy">' + ico('cart', 20) + 'خرید</button><button class="btn ghost tap" data-a="pp-rec">پول گرفتم</button><button class="btn ghost tap" data-a="pp-pay">پول دادم</button></div><button class="btn ghost tap" data-a="pp-ret" style="margin-top:8px">' + ico('undo', 20) + 'مرجوعی (فروش یا خرید)</button>' +
-      '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button><button class="btn ghost tap" data-a="pp-sms">' + ico('note', 18) + 'پیامک</button></div>' + partyInfoH(pt) +
-      (pt.mobile || pt.address ? '<div class="boxes g2" style="margin-top:8px">' + (pt.mobile ? '<div class="cell"><small>موبایل</small><b>' + esc(pt.mobile) + '</b></div>' : '') + (pt.address ? '<div class="cell"><small>آدرس</small><b>' + esc(pt.address) + '</b></div>' : '') + '</div>' : '') +
+      '<div class="boxes g2" style="margin-top:8px"><button class="btn tap" data-a="pp-sale">' + ico('tag', 20) + 'فروش</button><button class="btn tap" data-a="pp-buy">' + ico('cart', 20) + 'خرید</button></div>' +
+      '<button class="btn ghost tap more-t' + (ppMore ? ' on' : '') + '" data-a="pp-more" style="margin-top:8px">' + (ppMore ? 'بستن گزینه‌های بیشتر' : 'گزینه‌های بیشتر') + ' <span class="more-ar">▾</span></button>' +
+      (ppMore ? '<div class="more-p"><div class="boxes g2"><button class="btn ghost tap" data-a="pp-rec">پول گرفتم</button><button class="btn ghost tap" data-a="pp-pay">پول دادم</button></div><button class="btn ghost tap" data-a="pp-ret" style="margin-top:8px">' + ico('undo', 20) + 'مرجوعی (فروش یا خرید)</button>' +
+      '<div class="boxes g2" style="margin-top:8px"><button class="btn ghost tap" data-a="pp-send">' + ico('image', 18) + 'ارسال صورت‌حساب</button><button class="btn ghost tap" data-a="pp-chq">' + ico('bank', 18) + 'ثبت چک</button><button class="btn ghost tap" data-a="pp-sms">' + ico('note', 18) + 'پیامک</button></div></div>' : '') + partyInfoH(pt) +
+      (pt.mobile ? '<div class="boxes g2" style="margin-top:8px"><div class="cell"><small>موبایل</small><b>' + esc(pt.mobile) + '</b></div></div>' : '') +
+      (pt.address ? '<div class="cell" style="margin-top:8px"><small>آدرس</small><b class="wrap">' + esc(pt.address) + '</b></div>' : '') +
+      partySalesH(id) +
       partyGallery(id) + crow(fa(ds.length) + ' تراکنش', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('تراکنشی نیست'));
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pp-edit">ویرایش پروفایل</button><button class="btn ghost tap" data-a="pp-rep">' + ico('file', 18) + 'صورت‌حساب</button>' });
@@ -2158,7 +2174,7 @@ function openProduct(id) {
     const ds = applyDocs(S.docs.filter(d => (d.items || []).some(i => i.pid === id)), 'docs');
     p.body.innerHTML = '<div class="boxes g2" style="margin-top:12px"><div class="cell"><small>موجودی</small><b>' + (st > 0 ? qf(st) + ' ' + pr.unit : 'فاقد موجودی') + '</b></div><div class="cell"><small>ارزش به قیمت خرید</small><b>' + mu(L.stockValue(S, id)) + '</b></div></div>' + (pr.cat ? '<div class="hint">دسته‌بندی: ' + esc(pr.cat) + '</div>' : '') + (pr.barcode ? '<div class="hint">بارکد: <b dir="ltr">' + esc(pr.barcode) + '</b></div>' : '') +
       '<div class="sec"><h3>دسته‌های خرید (مرجع قیمت)</h3><div class="list">' + (bs.map(b => '<div class="row"><span class="tx"><b>' + fa(b.left) + ' از ' + fa(b.qty) + ' ' + pr.unit + '</b><small>' + fdate(b.ts) + (b.fpu > 0 ? ' • شامل کرایه ' + money(b.fpu) : '') + ((b.partners || []).length ? ' • ' + b.partners.map(p => esc((partner(p.partnerId) || {}).name) + ' ' + shareText(p)).join('، ') : '') + '</small></span><span class="end"><b>' + mu(b.price) + '</b><small>هر ' + pr.unit + '</small></span></div>').join('') || empty('هنوز خریدی ثبت نشده')) + '</div></div>' +
-      crow('گردش کالا', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('گردشی نیست'));
+      prodSalesH(id) + crow('گردش کالا', 'docs') + (ds.length ? docListH(ds, flatSort('docs')) : empty('گردشی نیست'));
   };
   const p = openPage({ title: '', body: '', foot: '<button class="btn tap" data-a="pr-edit">ویرایش</button>' + (prod(id).pack ? '<button class="btn ghost tap" data-a="pr-pack">ویرایش / باز کردن / حذف پک</button>' : '') + '<button class="btn ghost tap" data-a="pr-buy">محصول خریدم</button><button class="btn ghost tap" data-a="pr-sm">ورود / خروج / مصرف / ضایعات</button>' });
   p.el._redraw = () => draw(p); p.el._id = id; draw(p);
